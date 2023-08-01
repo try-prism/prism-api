@@ -24,19 +24,13 @@ poetry install
 poetry shell
 ```
 
-4. Install packages from requirements.txt
-
-```bash
-pip install -r requirements.txt
-```
-
-5. Setup pre-commit git hook
+4. Setup pre-commit git hook
 
 ```bash
 pre-commit install
 ```
 
-6. Run the api using the following command
+5. Run the api using the following command
 
 ```bash
 cd app
