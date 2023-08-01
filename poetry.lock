@@ -693,16 +693,6 @@ typing-inspect = ">=0.8.0"
 urllib3 = "<2"
 
 [[package]]
-name = "logging"
-version = "0.4.9.6"
-description = "A logging module for Python"
-optional = false
-python-versions = "*"
-files = [
-    {file = "logging-0.4.9.6.tar.gz", hash = "sha256:26f6b50773f085042d301085bd1bf5d9f3735704db9f37c1ce6d8b85c38f2417"},
-]
-
-[[package]]
 name = "marshmallow"
 version = "3.20.1"
 description = "A lightweight library for converting complex datatypes to and from native Python datatypes."
@@ -1708,4 +1698,4 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "232545a61febb83ea76aa6823c7d0d699d30d197916ae1de32032467d7878bc3"
+content-hash = "1ae6e8d32337c9c9ca237a698a4d912fa16ef0abddca834aefcff3ca73a36837"
