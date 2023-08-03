@@ -14,4 +14,22 @@ COPY --from=requirements-stage /tmp/requirements.txt /app/requirements.txt
 
 RUN pip install --no-cache-dir --upgrade -r /app/requirements.txt
 
+# Set environment variables
+ENV OPENAI_API_KEY=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
+ENV OPENAI_ORG_KEY=org-AnMZZ5YjRzyIXkSYH5CtI7FW
+
+ENV AWS_ACCESS_KEY_ID=AKIAYYNCMG5OFUFV4K4W
+ENV AWS_SECRET_ACCESS_KEY=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
+ENV AWS_DEFAULT_REGION=us-east-1
+
+ENV MERGE_API_KEY=TEST_API_KEY
+
+ENV DYNAMODB_USER_TABLE=srv-prism-user
+ENV DYNAMODB_FILE_TABLE=srv-prism-file
+ENV DYNAMODB_ORGANIZATION_TABLE=srv-prism-organization
+ENV DYNAMODB_STORAGE_CONTEXT_TABLE=srv-prism-storage-context
+ENV DYNAMODB_WHITELIST_TABLE=srv-prism-whitelist
+
+ENV S3_FILE_BUCKET=srv-prism-file-store
+
 COPY ./app /app

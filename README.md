@@ -30,6 +30,14 @@ poetry shell
 pre-commit install
 ```
 
+5. Create .env file
+
+Ask teammates for the environment configuration
+
+```bash
+touch .env
+```
+
 5. Run the api using the following command
 
 ```bash
