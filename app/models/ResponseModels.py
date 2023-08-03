@@ -18,3 +18,7 @@ class IntegrationResponse(BaseModel):
 class IntegrationDetailResponse(BaseModel):
     status: int
     integrations: list
+
+
+class IntegrationRemoveResponse(BaseModel):
+    status: int

@@ -45,8 +45,8 @@ def prism_openapi() -> dict:
 
 
 app.openapi = prism_openapi
-app.include_router(integration_router, prefix="/api/v1")
-app.include_router(organization_router, prefix="/api/v1")
-app.include_router(process_router, prefix="/api/v1")
-app.include_router(query_router, prefix="/api/v1")
-app.include_router(user_router, prefix="/api/v1")
+app.include_router(integration_router, prefix="/v1")
+app.include_router(organization_router, prefix="/v1")
+app.include_router(process_router, prefix="/v1")
+app.include_router(query_router, prefix="/v1")
+app.include_router(user_router, prefix="/v1")

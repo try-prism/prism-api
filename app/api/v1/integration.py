@@ -1,4 +1,3 @@
-# Standard Library
 import logging
 import time
 from http import HTTPStatus
@@ -6,13 +5,14 @@ from http import HTTPStatus
 import requests
 from botocore.exceptions import ClientError
 from constants import DYNAMODB_ORGANIZATION_TABLE, MERGE_API_KEY
-from fastapi import APIRouter
+from fastapi import APIRouter, Header
 from fastapi.responses import JSONResponse
 from models.RequestModels import GenerateLinkTokenRequest, IntegrationRequest
 from models.ResponseModels import (
     ErrorDTO,
     GenerateLinkTokenResponse,
     IntegrationDetailResponse,
+    IntegrationRemoveResponse,
     IntegrationResponse,
 )
 from storage import DynamoDBService
@@ -24,8 +24,7 @@ logger = logging.getLogger(__name__)
 | Endpoint                      | Description                          | Method |
 |-------------------------------|--------------------------------------|--------|
 | `/integration`                | Add a new cloud storage integration  | POST   |
-| `/integration/{org_id}`       | Retrieve integration's details       | GET    |
-| `/integration/{org_id}`       | Update an integration's details      | PATCH  |
+| `/integration/{org_id}`       | Retrieve integration details         | GET    |
 | `/integration/{org_id}`       | Remove a cloud storage integration   | DELETE |
 | `/generate-link-token`        | Generate link token for integration  | POST   |
 """
@@ -126,9 +125,9 @@ async def integration(
         )
 
     org_item = response["Item"]
+    timestamp = str(time.time())
 
     try:
-        timestamp = str(time.time())
         link_id_map: dict = org_item.get("link_id_map", {"M": {}})["M"]
         link_id_map[account_token] = {
             "M": {"source": {"S": "UNKNOWN"}, "created": {"S": timestamp}}
@@ -147,12 +146,14 @@ async def integration(
         logger.error(str(e))
         return IntegrationResponse(status=HTTPStatus.FORBIDDEN.value)
 
+    # TODO: process file processing here
+
     return IntegrationResponse(status=HTTPStatus.OK.value)
 
 
 @router.get(
     "/integration/{org_id}",
-    summary="Get integration details",
+    summary="Retrieve integration details",
     tags=["Integration"],
     response_model=IntegrationDetailResponse,
     responses={
@@ -172,7 +173,7 @@ async def get_integration_detail(
             },
         )
 
-    logger.info(org_id)
+    logger.info(f"org_id={org_id}")
 
     # Retrieve organization's integration details
     dynamodb_service = DynamoDBService()
@@ -203,3 +204,74 @@ async def get_integration_detail(
         return IntegrationDetailResponse(
             status=HTTPStatus.FORBIDDEN.value, integrations=[]
         )
+
+
+@router.delete(
+    "/integration/{org_id}",
+    summary="Remove a cloud storage integration",
+    tags=["Integration"],
+    response_model=IntegrationRemoveResponse,
+    responses={
+        200: {"model": IntegrationRemoveResponse, "description": "OK"},
+        400: {"model": ErrorDTO, "description": "Error: Bad request"},
+    },
+)
+async def remove_integration_detail(
+    org_id: str,
+    integration_account_token: str = Header(),
+):
+    if not org_id or not integration_account_token:
+        return JSONResponse(
+            status_code=400,
+            content={
+                "code": HTTPStatus.BAD_REQUEST,
+                "description": "Invalid organization id or account token",
+            },
+        )
+
+    logger.info(
+        f"org_id={org_id}, integration_account_token={integration_account_token}"
+    )
+
+    # Remove organization's integration detail
+    dynamodb_service = DynamoDBService()
+
+    key = {"id": {"S": org_id}}
+    response = dynamodb_service.get_item(DYNAMODB_ORGANIZATION_TABLE, key)
+
+    if not response:
+        return JSONResponse(
+            status_code=400,
+            content={
+                "code": HTTPStatus.BAD_REQUEST,
+                "description": "No such organization exists",
+            },
+        )
+
+    org_item = response["Item"]
+    timestamp = str(time.time())
+
+    try:
+        link_id_map = org_item.get("link_id_map", {"M": {}})["M"]
+        logger.info(f"link_id_map={link_id_map}")
+        del link_id_map[integration_account_token]
+
+        dynamodb_service.get_client().update_item(
+            TableName=DYNAMODB_ORGANIZATION_TABLE,
+            Key=key,
+            UpdateExpression="SET link_id_map = :map, last_updated = :lu",
+            ExpressionAttributeValues={
+                ":map": {"M": link_id_map},
+                ":lu": {"S": timestamp},
+            },
+        )
+    except ClientError as e:
+        logger.error(str(e))
+        return ErrorDTO(code=HTTPStatus.FORBIDDEN.value, description=str(e))
+    except Exception as e:
+        logger.error(str(e))
+        return ErrorDTO(code=HTTPStatus.FORBIDDEN.value, description=str(e))
+
+    # TODO: Remove data related to this integration
+
+    return IntegrationRemoveResponse(status=HTTPStatus.OK.value)
