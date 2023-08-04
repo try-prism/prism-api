@@ -2,6 +2,7 @@
 import os
 
 from dotenv import load_dotenv
+from ray.runtime_env import RuntimeEnv
 
 load_dotenv()
 
@@ -49,3 +50,9 @@ SUPPORTED_EXTENSIONS = [
     "pptx",
     "xlsx",
 ]
+
+# https://docs.ray.io/en/latest/ray-core/api/doc/ray.runtime_env.RuntimeEnv.html
+RAY_RUNTIME_ENV = RuntimeEnv(
+    pip=["llama_index", "langchain", "mergepythonclient", "nltk", "unstructured"],
+    env_vars={MERGE_API_KEY: MERGE_API_KEY, SUPPORTED_EXTENSIONS: SUPPORTED_EXTENSIONS},
+)
