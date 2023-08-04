@@ -23,3 +23,17 @@ DYNAMODB_WHITELIST_TABLE = os.environ["DYNAMODB_WHITELIST_TABLE"]
 
 # S3 Buckets
 S3_FILE_BUCKET = os.environ["S3_FILE_BUCKET"]
+
+
+SUPPORTED_EXTENSIONS = [
+    "html",
+    "rtf",
+    "txt",
+    "csv",
+    "doc",
+    "docx",
+    "pdf",
+    "ppt",
+    "pptx",
+    "xlsx",
+]

@@ -15,6 +15,9 @@ boto3 = "^1.28.16"
 tika = "^2.6.0"
 uvicorn = "^0.23.2"
 mergepythonclient = "^0.2.1"
+unstructured = {extras = ["csv", "doc", "docx", "html", "pdf", "ppt", "pptx", "rtf", "txt", "xlsx"], version = "^0.9.0"}
+ray = {extras = ["default"], version = "^2.6.2"}
+langchain = {extras = ["llms"], version = "^0.0.251"}
 
 
 [tool.poetry.group.dev.dependencies]
