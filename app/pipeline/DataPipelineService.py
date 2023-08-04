@@ -3,9 +3,8 @@ from typing import IO, Dict, List, Sequence
 
 import ray
 from llama_index import Document
-from llama_index.data_structs import Node
 from llama_index.node_parser import SimpleNodeParser
-from llama_index.schema import BaseNode
+from llama_index.schema import BaseNode, TextNode
 from merge.resources.filestorage.types import File
 from storage import MergeService
 
@@ -60,7 +59,7 @@ class DataPipelineService:
 
     def convert_documents_into_nodes(
         self, documents: Dict[str, Document]
-    ) -> List[Dict[str, Node]]:
+    ) -> List[Dict[str, TextNode]]:
         # Convert the loaded documents into llama_index Nodes.
         # This will split the documents into chunks.
 
