@@ -2,6 +2,7 @@ import logging
 from typing import Union
 
 import boto3
+from constants import DYNAMODB_ORGANIZATION_TABLE
 
 logger = logging.getLogger(__name__)
 
@@ -44,5 +45,11 @@ class DynamoDBService:
 
         if "Item" not in response:
             return None
+
+        return response
+
+    def get_organization(self, org_id: str) -> Union[dict, None]:
+        key = {"id": {"S": org_id}}
+        response = self.get_item(DYNAMODB_ORGANIZATION_TABLE, key)
 
         return response

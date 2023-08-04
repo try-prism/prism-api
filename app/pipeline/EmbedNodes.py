@@ -1,7 +1,7 @@
 from typing import Dict, List
 
 from langchain.embeddings.huggingface import HuggingFaceEmbeddings
-from llama_index.data_structs import Node
+from llama_index.schema import TextNode
 
 
 class EmbedNodes:
@@ -18,7 +18,9 @@ class EmbedNodes:
             encode_kwargs={"device": "cuda", "batch_size": 100},
         )
 
-    def __call__(self, node_batch: Dict[str, List[Node]]) -> Dict[str, List[Node]]:
+    def __call__(
+        self, node_batch: Dict[str, List[TextNode]]
+    ) -> Dict[str, List[TextNode]]:
         nodes = node_batch["node"]
         text = [node.text for node in nodes]
         embeddings = self.embedding_model.embed_documents(text)

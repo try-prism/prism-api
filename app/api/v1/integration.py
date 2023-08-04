@@ -114,9 +114,7 @@ async def integration(
 
     # Add account_token to organization's link_id_map
     dynamodb_service = DynamoDBService()
-
-    key = {"id": {"S": integration_request.organization_id}}
-    response = dynamodb_service.get_item(DYNAMODB_ORGANIZATION_TABLE, key)
+    response = dynamodb_service.get_organization(integration_request.organization_id)
 
     if not response:
         return JSONResponse(
@@ -138,7 +136,7 @@ async def integration(
 
         dynamodb_service.get_client().update_item(
             TableName=DYNAMODB_ORGANIZATION_TABLE,
-            Key=key,
+            Key={"id": {"S": integration_request.organization_id}},
             UpdateExpression="SET link_id_map = :map, updated_at = :ua",
             ExpressionAttributeValues={
                 ":map": {"M": link_id_map},
@@ -180,9 +178,7 @@ async def get_integration_detail(
 
     # Retrieve organization's integration details
     dynamodb_service = DynamoDBService()
-
-    key = {"id": {"S": org_id}}
-    response = dynamodb_service.get_item(DYNAMODB_ORGANIZATION_TABLE, key)
+    response = dynamodb_service.get_organization(org_id)
 
     if not response:
         return JSONResponse(
@@ -238,9 +234,7 @@ async def remove_integration_detail(
 
     # Remove organization's integration detail
     dynamodb_service = DynamoDBService()
-
-    key = {"id": {"S": org_id}}
-    response = dynamodb_service.get_item(DYNAMODB_ORGANIZATION_TABLE, key)
+    response = dynamodb_service.get_organization(org_id)
 
     if not response:
         return JSONResponse(
@@ -261,7 +255,7 @@ async def remove_integration_detail(
 
         dynamodb_service.get_client().update_item(
             TableName=DYNAMODB_ORGANIZATION_TABLE,
-            Key=key,
+            Key={"id": {"S": org_id}},
             UpdateExpression="SET link_id_map = :map, last_updated = :lu",
             ExpressionAttributeValues={
                 ":map": {"M": link_id_map},
