@@ -1,11 +1,11 @@
 import io
 import logging
 import uuid
-from typing import Optional, Union
+from typing import IO, Optional, Union
 
-from constants import MERGE_API_KEY
+from constants import MERGE_API_KEY, SUPPORTED_EXTENSIONS
 from merge.client import Merge
-from merge.resources.filestorage.types import CategoriesEnum, PaginatedFileList
+from merge.resources.filestorage.types import CategoriesEnum, File, PaginatedFileList
 
 logger = logging.getLogger(__name__)
 
@@ -44,30 +44,42 @@ class MergeService:
 
         return account_token_response.account_token
 
-    def list_files(self, next: Optional[str] = None) -> Union[PaginatedFileList, None]:
+    def list_files(
+        self, page_size: Optional[int] = 50, next: Optional[str] = None
+    ) -> Union[PaginatedFileList, None]:
         if not self.account_token:
             logger.error("Invalid account token")
             return
 
         try:
-            file_list = self.client.filestorage.files.list(cursor=next)
+            file_list = self.client.filestorage.files.list(
+                page_size=page_size, cursor=next
+            )
         except Exception as e:
-            logger.error(str(e))
+            logger.error(f"account_token={self.account_token}, next={next}, {str(e)}")
             return None
 
         return file_list
 
     def download_file(
-        self, file_id: str, in_bytes: Optional[bool] = False
-    ) -> Union[bytes, str, None]:
+        self, file: File, in_bytes: Optional[bool] = False
+    ) -> Union[IO[bytes], str, None]:
         if not self.account_token:
             logger.error("Invalid account token")
             return
 
+        file_extension = file.name.split(".")[-1]
+
+        if file_extension not in SUPPORTED_EXTENSIONS:
+            logger.error(f"File type not supported: .{file_extension}")
+            return
+
         try:
-            response = self.client.filestorage.files.download_retrieve(id=file_id)
+            response = self.client.filestorage.files.download_retrieve(id=file.id)
         except Exception as e:
-            logger.error(str(e))
+            logger.error(
+                f"account_token={self.account_token}, file_id={file.id}, {str(e)}"
+            )
             return None
 
         if in_bytes:
