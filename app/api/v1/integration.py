@@ -2,9 +2,8 @@ import logging
 import time
 from http import HTTPStatus
 
-import requests
 from botocore.exceptions import ClientError
-from constants import DYNAMODB_ORGANIZATION_TABLE, MERGE_API_KEY
+from constants import DYNAMODB_ORGANIZATION_TABLE
 from fastapi import APIRouter, Header
 from fastapi.responses import JSONResponse
 from models.RequestModels import GenerateLinkTokenRequest, IntegrationRequest
@@ -15,7 +14,7 @@ from models.ResponseModels import (
     IntegrationRemoveResponse,
     IntegrationResponse,
 )
-from storage import DynamoDBService
+from storage import DynamoDBService, MergeService
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -58,18 +57,19 @@ async def generate_link_token(
 
     logger.info(generate_request)
 
-    headers = {"Authorization": f"Bearer {MERGE_API_KEY}"}
-    body = {
-        "end_user_origin_id": generate_request.organization_id,  # unique entity ID
-        "end_user_organization_name": generate_request.organization_name,  # organization name
-        "end_user_email_address": generate_request.email_address,  # email address
-        "categories": ["filestorage"],
-    }
+    merge_service = MergeService()
+    link_token = merge_service.generate_link_token(
+        generate_request.organization_id,
+        generate_request.organization_name,
+        generate_request.email_address,
+    )
 
-    link_token_url = "https://api.merge.dev/api/integrations/create-link-token"
-    link_token_result = requests.post(link_token_url, data=body, headers=headers)
-    link_token = link_token_result.json().get("link_token")
     logger.info(f"generate_request={generate_request}, link_token={link_token}")
+
+    if not link_token:
+        return GenerateLinkTokenResponse(
+            status=HTTPStatus.SERVICE_UNAVAILABLE.value, link_token=""
+        )
 
     return GenerateLinkTokenResponse(status=HTTPStatus.OK.value, link_token=link_token)
 
@@ -104,10 +104,13 @@ async def integration(
     logger.info(integration_request)
 
     # Generate Merge account_token from public_token
-    headers = {"Authorization": f"Bearer {MERGE_API_KEY}"}
-    account_token_url = f"https://api.merge.dev/api/integrations/account-token/{integration_request.public_token}"
-    account_token_result = requests.get(account_token_url, headers=headers)
-    account_token = account_token_result.json().get("account_token")
+    merge_service = MergeService()
+    account_token = merge_service.generate_account_token(
+        integration_request.public_token
+    )
+
+    if not account_token:
+        return IntegrationResponse(status=HTTPStatus.SERVICE_UNAVAILABLE.value)
 
     # Add account_token to organization's link_id_map
     dynamodb_service = DynamoDBService()

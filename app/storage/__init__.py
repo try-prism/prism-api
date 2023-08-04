@@ -1,3 +1,4 @@
 from .DynamoDBService import DynamoDBService
+from .MergeService import MergeService
 
-__all__ = ["DynamoDBService"]
+__all__ = ["DynamoDBService", "MergeService"]
