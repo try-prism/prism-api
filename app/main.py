@@ -1,10 +1,12 @@
 import logging
 
-from api.v1.integration import router as integration_router
-from api.v1.organization import router as organization_router
-from api.v1.process import router as process_router
-from api.v1.query import router as query_router
-from api.v1.user import router as user_router
+from api.v1 import (
+    integration_router,
+    organization_router,
+    process_router,
+    query_router,
+    user_router,
+)
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
