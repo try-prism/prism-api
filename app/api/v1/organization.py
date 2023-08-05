@@ -34,7 +34,6 @@ logger = logging.getLogger(__name__)
 | `/organization`                      | Delete an organization                | DELETE |
 | `/organization/{org_id}`             | Retrieve a organization's details     | GET    |
 | `/organization/{org_id}`             | Update a organization's admin id      | PATCH  |
-| `/organization/{org_id}/user`        | Retrieve users of a organization      | GET    |
 | `/organization/{org_id}/user`        | Invite a user to a organization       | POST   |
 | `/organization/{org_id}/user`        | Candel pending user invite            | DELETE |
 """
@@ -196,43 +195,6 @@ async def update_organization(org_id: str, update_request: UpdateOrganizationReq
         )
 
     return UpdateOrganizationResponse(status=HTTPStatus.OK.value)
-
-
-@router.get(
-    "/organization/{org_id}/user",
-    summary="Retrieve users of a organization",
-    tags=["Organization"],
-    response_model=GetOrganizationResponse,
-    responses={
-        200: {"model": GetOrganizationResponse, "description": "OK"},
-        400: {"model": ErrorDTO, "description": "Error: Bad request"},
-    },
-)
-async def get_organization_users(
-    org_id: str,
-):
-    if not org_id:
-        return ErrorDTO(
-            code=HTTPStatus.BAD_REQUEST.value,
-            description="Invalid organization ID",
-        )
-
-    logger.info("org_id=%s", org_id)
-
-    dynamodb_service = DynamoDBService()
-    response = dynamodb_service.get_organization(org_id)
-
-    if not response:
-        logger.error("org_id=%s, error=Organization does not exist", org_id)
-        return ErrorDTO(
-            code=HTTPStatus.BAD_REQUEST.value,
-            description="Organization does not exist",
-        )
-
-    return GetOrganizationResponse(
-        status=HTTPStatus.OK.value,
-        organization=to_organization_model(response).user_list,
-    )
 
 
 @router.post(
