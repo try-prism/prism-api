@@ -16,8 +16,10 @@ class SESService:
         self, org_name: str, org_user_email: str, org_user_id: str
     ) -> bool:
         logger.info(
-            f"Sending signup email. org_name={org_name}, "
-            f"user_email={org_user_email}, org_user_id={org_user_id}"
+            "Sending signup email. org_name=%s, user_email=%s, org_user_id=%s",
+            org_name,
+            org_user_email,
+            org_user_id,
         )
 
         try:
@@ -56,13 +58,19 @@ class SESService:
                 ReplyToAddresses=[],
             )
             logger.info(
-                f"org_name={org_name}, org_user_email={org_user_email}, "
-                f"org_user_id={org_user_id}, response={response}"
+                "org_name=%s, org_user_email=%s, org_user_id=%s, response=%s",
+                org_name,
+                org_user_email,
+                org_user_id,
+                response,
             )
         except Exception as e:
             logger.error(
-                f"org_name={org_name}, org_user_email={org_user_email}, "
-                f"org_user_id={org_user_id}, {str(e)}"
+                "org_name=%s, org_user_email=%s, org_user_id=%s, error=%s",
+                org_name,
+                org_user_email,
+                org_user_id,
+                str(e),
             )
             return False
 

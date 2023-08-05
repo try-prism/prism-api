@@ -29,7 +29,7 @@ class DynamoDBService:
                 TableName=table_name,
             )
         except ClientError as e:
-            logger.error(f"table_name={table_name}, item={item}, {str(e)}")
+            logger.error("table_name=%s, item=%s, error=%s", table_name, item, str(e))
             return False
 
         return True
@@ -60,8 +60,12 @@ class DynamoDBService:
             )
         except ClientError as e:
             logger.error(
-                f"table_name={table_name}, key={key}, field_name={field_name}, "
-                f"field_value={field_value}, {str(e)}"
+                "table_name=%s, key=%s, field_name=%s, field_value=%s, error=%s",
+                table_name,
+                key,
+                field_name,
+                field_value,
+                str(e),
             )
             return False
 

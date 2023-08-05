@@ -27,3 +27,8 @@ class UpdateOrganizationRequest(BaseModel):
 class InviteUserOrganizationRequest(BaseModel):
     organization_name: str
     organization_user_email: str
+
+
+class CancelInviteUserOrganizationRequest(BaseModel):
+    organization_name: str
+    organization_user_id: str

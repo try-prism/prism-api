@@ -8,11 +8,13 @@ from constants import DYNAMODB_ORGANIZATION_TABLE
 from fastapi import APIRouter
 from models import to_organization_model
 from models.RequestModels import (
+    CancelInviteUserOrganizationRequest,
     InviteUserOrganizationRequest,
     RegisterOrganizationRequest,
     UpdateOrganizationRequest,
 )
 from models.ResponseModels import (
+    CancelInviteUserOrganizationResponse,
     ErrorDTO,
     GetOrganizationResponse,
     InviteUserOrganizationResponse,
@@ -55,13 +57,16 @@ async def register_organization(
         not register_request.organization_name
         or not register_request.organization_admin_id
     ):
+        logger.error(
+            "Invalid RegisterOrganizationRequest. register_request=%s", register_request
+        )
         return ErrorDTO(
             code=HTTPStatus.BAD_REQUEST.value,
             description="Invalid RegisterOrganizationRequest",
         )
 
     org_id = str(uuid.uuid4())
-    logger.info(f"register_request={register_request}, org_id={org_id}")
+    logger.info("register_request=%s, org_id=%s", register_request, org_id)
 
     dynamodb_service = DynamoDBService()
 
@@ -72,6 +77,9 @@ async def register_organization(
     )
 
     if not response:
+        logger.error(
+            "Failed to register organization. register_request=%s", register_request
+        )
         return ErrorDTO(
             code=HTTPStatus.FORBIDDEN.value,
             description="Failed to register organization",
@@ -94,17 +102,19 @@ async def get_organization(
     org_id: str,
 ):
     if not org_id:
+        logger.error("Invalid organization ID. org_id=%s", org_id)
         return ErrorDTO(
             code=HTTPStatus.BAD_REQUEST.value,
             description="Invalid organization ID",
         )
 
-    logger.info(f"org_id={org_id}")
+    logger.info("org_id=%s", org_id)
 
     dynamodb_service = DynamoDBService()
     response = dynamodb_service.get_organization(org_id)
 
     if not response:
+        logger.error("Organization does not exist. org_id=%s", org_id)
         return ErrorDTO(
             code=HTTPStatus.FORBIDDEN.value,
             description="Organization does not exist",
@@ -127,13 +137,22 @@ async def get_organization(
     },
 )
 async def update_organization(org_id: str, update_request: UpdateOrganizationRequest):
-    if not org_id or not update_request.organization_admin_id:
+    if (
+        not org_id
+        or not update_request.organization_admin_id
+        or update_request.prev_organization_admin_id
+    ):
+        logger.error(
+            "Invalid organization update request. org_id=%s, update_request=%s",
+            org_id,
+            update_request,
+        )
         return ErrorDTO(
             code=HTTPStatus.BAD_REQUEST.value,
             description="Invalid organization update request",
         )
 
-    logger.info(f"org_id={org_id}, update_request={update_request}")
+    logger.info("org_id=%s, update_request=%s", org_id, update_request)
 
     dynamodb_service = DynamoDBService()
     response = dynamodb_service.get_organization(org_id)
@@ -191,7 +210,7 @@ async def get_organization_users(
             description="Invalid organization ID",
         )
 
-    logger.info(f"org_id={org_id}")
+    logger.info("org_id=%s", org_id)
 
     dynamodb_service = DynamoDBService()
     response = dynamodb_service.get_organization(org_id)
@@ -231,7 +250,7 @@ async def invite_user_to_organization(
             description="Invalid organization invite request",
         )
 
-    logger.info(f"org_id={org_id}, invite_request={invite_request}")
+    logger.info("org_id=%s, invite_request=%s", org_id, invite_request)
 
     dynamodb_service = DynamoDBService()
     org_user_id = str(uuid.uuid4())
@@ -273,3 +292,59 @@ async def invite_user_to_organization(
         )
 
     return InviteUserOrganizationResponse(status=HTTPStatus.OK.value)
+
+
+@router.delete(
+    "/organization/{org_id}/user",
+    summary="Candel pending user invite",
+    tags=["Organization"],
+    response_model=CancelInviteUserOrganizationResponse,
+    responses={
+        200: {"model": CancelInviteUserOrganizationResponse, "description": "OK"},
+        400: {"model": ErrorDTO, "description": "Error: Bad request"},
+    },
+)
+async def cancel_pending_user_invite(
+    org_id: str,
+    cancel_request: CancelInviteUserOrganizationRequest,
+):
+    if (
+        not org_id
+        or not cancel_request.organization_name
+        or not cancel_request.organization_user_id
+    ):
+        return ErrorDTO(
+            code=HTTPStatus.BAD_REQUEST.value,
+            description="Invalid user invite cancel request",
+        )
+
+    logger.info("org_id=%s, cancel_request=%s", org_id, cancel_request)
+
+    dynamodb_service = DynamoDBService()
+
+    invited_response = dynamodb_service.modify_invited_users_list(
+        org_id=cancel_request.organization_user_id,
+        org_user_id=cancel_request.organization_user_id,
+        is_remove=True,
+    )
+
+    if not invited_response:
+        return ErrorDTO(
+            code=HTTPStatus.BAD_REQUEST.value,
+            description="Organization does not exist or user not invited",
+        )
+
+    whitelist_response = dynamodb_service.modify_whitelist(
+        org_id=org_id,
+        org_name=cancel_request.organization_name,
+        org_user_id=cancel_request.organization_user_id,
+        is_remove=True,
+    )
+
+    if not whitelist_response:
+        return ErrorDTO(
+            code=HTTPStatus.BAD_REQUEST.value,
+            description="Failed to remove user from whitelist",
+        )
+
+    return CancelInviteUserOrganizationResponse(status=HTTPStatus.OK.value)
