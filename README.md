@@ -38,7 +38,13 @@ Ask teammates for the environment configuration
 touch .env
 ```
 
-5. Run the api using the following command
+6. Start Ray instance
+
+```bash
+ray start
+```
+
+7. Run the api using the following command
 
 ```bash
 cd app

@@ -2,6 +2,7 @@
 import os
 
 from dotenv import load_dotenv
+from ray.runtime_env import RuntimeEnv
 
 load_dotenv()
 
@@ -29,6 +30,11 @@ DYNAMODB_WHITELIST_TABLE = os.environ["DYNAMODB_WHITELIST_TABLE"]
 S3_FILE_BUCKET = os.environ["S3_FILE_BUCKET"]
 
 
+# SES Configurations
+SES_SENDER_EMAIL = "noreply@tryprism.ai"
+DEFAULT_SIGNUP_URL = "http://tryprism.ai/signup?user="
+
+
 # Zilliz Cloud
 ZILLIZ_CLOUD_HOST = os.environ["ZILLIZ_CLOUD_HOST"]
 ZILLIZ_CLOUD_PORT = os.environ["ZILLIZ_CLOUD_PORT"]
@@ -49,3 +55,9 @@ SUPPORTED_EXTENSIONS = [
     "pptx",
     "xlsx",
 ]
+
+# https://docs.ray.io/en/latest/ray-core/api/doc/ray.runtime_env.RuntimeEnv.html
+RAY_RUNTIME_ENV = RuntimeEnv(
+    pip=["llama_index", "langchain", "mergepythonclient", "nltk", "unstructured"],
+    env_vars={"MERGE_API_KEY": MERGE_API_KEY},
+)

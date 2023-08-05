@@ -2,16 +2,21 @@ import logging
 from typing import IO, Dict, List, Sequence
 
 import ray
+from constants import RAY_RUNTIME_ENV
 from llama_index import Document
 from llama_index.node_parser import SimpleNodeParser
 from llama_index.schema import BaseNode, TextNode
 from merge.resources.filestorage.types import File
+from ray.data import ActorPoolStrategy, Dataset, from_items
+from ray.data.dataset import MaterializedDataset
 from storage import MergeService
 
 from .CustomUnstructuredReader import CustomUnstructuredReader
 from .EmbedNodes import EmbedNodes
 
 logger = logging.getLogger(__name__)
+
+ray.init(runtime_env=RAY_RUNTIME_ENV)
 
 
 class DataPipelineService:
@@ -43,12 +48,12 @@ class DataPipelineService:
 
         return [{"doc": doc} for doc in documents]
 
-    def load_data(self, all_files: List[File]):
+    def load_data(self, all_files: List[File]) -> Dataset:
         logger.info(f"Started loading data. account_token={self.account_token}")
 
         # Get the file data from all files & Create the Ray Dataset pipeline
         all_items = [{"data": file} for file in all_files]
-        ds = ray.data.from_items(all_items)
+        ds: MaterializedDataset = from_items(all_items)
 
         # Use `flat_map` since there is a 1:N relationship.
         # Each filepath returns multiple documents.
@@ -68,7 +73,7 @@ class DataPipelineService:
 
         return [{"node": node} for node in nodes]
 
-    def generate_nodes(self, loaded_docs):
+    def generate_nodes(self, loaded_docs: Dataset) -> Dataset:
         logger.info(f"Started generating nodes. account_token={self.account_token}")
 
         # Use `flat_map` since there is a 1:N relationship. Each document returns multiple nodes.
@@ -77,7 +82,7 @@ class DataPipelineService:
 
         return nodes
 
-    def generate_embeddings(self, nodes) -> Sequence[BaseNode]:
+    def generate_embeddings(self, nodes: Dataset) -> Sequence[BaseNode]:
         """
         Use `map_batches` to specify a batch size to maximize GPU utilization.
         We define `EmbedNodes` as a class instead of a function
@@ -91,7 +96,7 @@ class DataPipelineService:
             # Use 1 GPU per actor.
             num_gpus=1,
             # There are 4 GPUs in the cluster. Each actor uses 1 GPU. So we want 4 total actors.
-            compute=ray.data.ActorPoolStrategy(size=4),
+            compute=ActorPoolStrategy(size=4),
         )
 
         # Trigger execution and collect all the embedded nodes.
