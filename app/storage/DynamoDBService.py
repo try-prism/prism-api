@@ -1,6 +1,5 @@
 import logging
 import time
-from typing import Union
 
 import boto3
 from botocore.exceptions import ClientError
@@ -35,7 +34,7 @@ class DynamoDBService:
 
         return True
 
-    def get_item(self, table_name: str, key: dict) -> Union[dict, None]:
+    def get_item(self, table_name: str, key: dict) -> dict | None:
         response = self.client.get_item(
             Key=key,
             TableName=table_name,
@@ -46,7 +45,7 @@ class DynamoDBService:
 
         return response
 
-    def delete_item(self, table_name: str, key: dict) -> Union[dict, None]:
+    def delete_item(self, table_name: str, key: dict) -> dict | None:
         response = self.client.delete_item(
             TableName=table_name, Key=key, ReturnValues="ALL_OLD"
         )
@@ -76,7 +75,7 @@ class DynamoDBService:
 
         return response
 
-    def get_organization(self, org_id: str) -> Union[dict, None]:
+    def get_organization(self, org_id: str) -> dict | None:
         key = {"id": {"S": org_id}}
         response = self.get_item(DYNAMODB_ORGANIZATION_TABLE, key)
 

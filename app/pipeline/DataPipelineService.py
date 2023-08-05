@@ -1,5 +1,6 @@
 import logging
-from typing import IO, Dict, List, Sequence
+from collections.abc import Sequence
+from typing import IO
 
 import ray
 from constants import RAY_RUNTIME_ENV
@@ -26,7 +27,7 @@ class DataPipelineService:
         self.parser = SimpleNodeParser()
         self.merge_service = MergeService(account_token=account_token)
 
-    def get_embedded_nodes(self, all_files: List[File]) -> Sequence[BaseNode]:
+    def get_embedded_nodes(self, all_files: list[File]) -> Sequence[BaseNode]:
         loaded_docs = self.load_data(all_files)
         nodes = self.generate_nodes(loaded_docs)
         ray_docs_nodes = self.generate_embeddings(nodes)
@@ -34,8 +35,8 @@ class DataPipelineService:
         return ray_docs_nodes
 
     def load_and_parse_files(
-        self, file_row: Dict[str, File]
-    ) -> List[Dict[str, Document]]:
+        self, file_row: dict[str, File]
+    ) -> list[dict[str, Document]]:
         documents = []
 
         file_in_bytes: IO[bytes] = self.merge_service.download_file(
@@ -48,7 +49,7 @@ class DataPipelineService:
 
         return [{"doc": doc} for doc in documents]
 
-    def load_data(self, all_files: List[File]) -> Dataset:
+    def load_data(self, all_files: list[File]) -> Dataset:
         logger.info(f"Started loading data. account_token={self.account_token}")
 
         # Get the file data from all files & Create the Ray Dataset pipeline
@@ -63,8 +64,8 @@ class DataPipelineService:
         return loaded_docs
 
     def convert_documents_into_nodes(
-        self, documents: Dict[str, Document]
-    ) -> List[Dict[str, TextNode]]:
+        self, documents: dict[str, Document]
+    ) -> list[dict[str, TextNode]]:
         # Convert the loaded documents into llama_index Nodes.
         # This will split the documents into chunks.
 
