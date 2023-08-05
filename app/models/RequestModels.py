@@ -22,3 +22,8 @@ class RegisterOrganizationRequest(BaseModel):
 class UpdateOrganizationRequest(BaseModel):
     organization_admin_id: str
     prev_organization_admin_id: str
+
+
+class InviteUserOrganizationRequest(BaseModel):
+    organization_name: str
+    organization_user_email: str

@@ -37,3 +37,7 @@ class GetOrganizationResponse(BaseModel):
 
 class UpdateOrganizationResponse(BaseModel):
     status: int
+
+
+class InviteUserOrganizationResponse(BaseModel):
+    status: int

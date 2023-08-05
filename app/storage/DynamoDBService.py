@@ -4,7 +4,7 @@ from typing import Union
 
 import boto3
 from botocore.exceptions import ClientError
-from constants import DYNAMODB_ORGANIZATION_TABLE
+from constants import DYNAMODB_ORGANIZATION_TABLE, DYNAMODB_WHITELIST_TABLE
 
 logger = logging.getLogger(__name__)
 
@@ -79,5 +79,18 @@ class DynamoDBService:
     def get_organization(self, org_id: str) -> Union[dict, None]:
         key = {"id": {"S": org_id}}
         response = self.get_item(DYNAMODB_ORGANIZATION_TABLE, key)
+
+        return response
+
+    def add_to_whitelist(self, org_id: str, org_name: str, org_user_id: str) -> bool:
+        timestamp = str(time.time())
+        new_whitelist_item = {
+            "id": {"S": org_user_id},
+            "org_name": {"S": org_name},
+            "org_id": {"S": org_id},
+            "created_at": {"S": timestamp},
+        }
+
+        response = self.put_item(DYNAMODB_WHITELIST_TABLE, new_whitelist_item)
 
         return response
