@@ -1,5 +1,3 @@
-from typing import List
-
 from pydantic import BaseModel
 
 
@@ -7,10 +5,10 @@ class OrganizationModel(BaseModel):
     id: str
     name: str
     admin_id: str
-    user_list: List[str]
+    user_list: list[str]
     index_id: str
     link_id_map: dict
-    document_list: List[str]
+    document_list: list[str]
     created_at: str
     updated_at: str
 

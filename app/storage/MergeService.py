@@ -1,7 +1,7 @@
 import io
 import logging
 import uuid
-from typing import IO, Optional, Union
+from typing import IO
 
 from constants import MERGE_API_KEY, SUPPORTED_EXTENSIONS
 from merge.client import Merge
@@ -13,13 +13,13 @@ logger = logging.getLogger(__name__)
 class MergeService:
     """https://github.com/merge-api/merge-python-client"""
 
-    def __init__(self, account_token: Optional[str] = None):
+    def __init__(self, account_token: str | None = None):
         self.client = Merge(api_key=MERGE_API_KEY, account_token=account_token)
         self.account_token = account_token
 
     def generate_link_token(
         self, org_id: str, org_name: str, org_email: str
-    ) -> Union[str, None]:
+    ) -> str | None:
         try:
             link_token_response = self.client.filestorage.link_token.create(
                 end_user_origin_id=org_id,
@@ -33,7 +33,7 @@ class MergeService:
 
         return link_token_response.link_token
 
-    def generate_account_token(self, public_token: str) -> Union[str, None]:
+    def generate_account_token(self, public_token: str) -> str | None:
         try:
             account_token_response = self.client.filestorage.account_token.retrieve(
                 public_token=public_token
@@ -45,8 +45,8 @@ class MergeService:
         return account_token_response.account_token
 
     def list_files(
-        self, page_size: Optional[int] = 50, next: Optional[str] = None
-    ) -> Union[PaginatedFileList, None]:
+        self, page_size: int | None = 50, next: str | None = None
+    ) -> PaginatedFileList | None:
         if not self.account_token:
             logger.error("Invalid account token")
             return
@@ -62,8 +62,8 @@ class MergeService:
         return file_list
 
     def download_file(
-        self, file: File, in_bytes: Optional[bool] = False
-    ) -> Union[IO[bytes], str, None]:
+        self, file: File, in_bytes: bool | None = False
+    ) -> IO[bytes] | str | None:
         if not self.account_token:
             logger.error("Invalid account token")
             return

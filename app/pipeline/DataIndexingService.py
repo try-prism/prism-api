@@ -1,6 +1,6 @@
 import logging
 import time
-from typing import Sequence, Union
+from collections.abc import Sequence
 
 import tiktoken
 from botocore.exceptions import ClientError
@@ -110,7 +110,7 @@ class DataIndexingService:
 
         return True
 
-    def load_vector_index(self) -> Union[VectorStoreIndex, None]:
+    def load_vector_index(self) -> VectorStoreIndex | None:
         logger.info(
             "Loading vector index. org_id={self.org_id}, account_token={self.account_token}"
         )
