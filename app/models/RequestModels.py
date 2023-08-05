@@ -19,6 +19,11 @@ class RegisterOrganizationRequest(BaseModel):
     organization_admin_id: str
 
 
+class RemoveOrganizationRequest(BaseModel):
+    organization_id: str
+    organization_admin_id: str
+
+
 class UpdateOrganizationRequest(BaseModel):
     organization_admin_id: str
     prev_organization_admin_id: str

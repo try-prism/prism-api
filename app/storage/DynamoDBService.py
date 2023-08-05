@@ -4,6 +4,7 @@ import time
 import boto3
 from botocore.exceptions import ClientError
 from constants import DYNAMODB_ORGANIZATION_TABLE, DYNAMODB_WHITELIST_TABLE
+from models import to_organization_model
 
 logger = logging.getLogger(__name__)
 
@@ -107,6 +108,20 @@ class DynamoDBService:
         response = self.get_item(DYNAMODB_ORGANIZATION_TABLE, key)
 
         return response
+
+    def remove_organization(self, org_id: str, org_admin_id: str) -> dict | None:
+        key = {"id": {"S": org_id}}
+        response = self.get_item(DYNAMODB_ORGANIZATION_TABLE, key)
+
+        if not response:
+            return None
+
+        org = to_organization_model(response)
+
+        if org.admin_id != org_admin_id:
+            return None
+
+        return self.delete_item(DYNAMODB_ORGANIZATION_TABLE, key)
 
     def modify_whitelist(
         self, org_id: str, org_name: str, org_user_id: str, is_remove: bool

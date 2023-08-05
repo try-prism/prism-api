@@ -30,6 +30,10 @@ class RegisterOrganizationResponse(BaseModel):
     status: int
 
 
+class RemoveOrganizationResponse(BaseModel):
+    status: int
+
+
 class GetOrganizationResponse(BaseModel):
     status: int
     organization: OrganizationModel

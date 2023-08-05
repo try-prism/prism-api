@@ -11,6 +11,7 @@ from models.RequestModels import (
     CancelInviteUserOrganizationRequest,
     InviteUserOrganizationRequest,
     RegisterOrganizationRequest,
+    RemoveOrganizationRequest,
     UpdateOrganizationRequest,
 )
 from models.ResponseModels import (
@@ -19,6 +20,7 @@ from models.ResponseModels import (
     GetOrganizationResponse,
     InviteUserOrganizationResponse,
     RegisterOrganizationResponse,
+    RemoveOrganizationResponse,
     UpdateOrganizationResponse,
 )
 from services import SESService
@@ -83,6 +85,49 @@ async def register_organization(
         )
 
     return RegisterOrganizationResponse(status=HTTPStatus.OK.value)
+
+
+@router.delete(
+    "/organization",
+    summary="Remove an organization",
+    tags=["Organization"],
+    response_model=RemoveOrganizationResponse,
+    responses={
+        200: {"model": RemoveOrganizationResponse, "description": "OK"},
+        400: {"model": ErrorDTO, "description": "Error: Bad request"},
+    },
+)
+async def remove_organization(
+    remove_request: RemoveOrganizationRequest,
+):
+    if not remove_request.organization_id or not remove_request.organization_admin_id:
+        return ErrorDTO(
+            code=HTTPStatus.BAD_REQUEST.value,
+            description="Invalid RemoveOrganizationRequest",
+        )
+
+    logger.info("remove_request=%s", remove_request)
+
+    dynamodb_service = DynamoDBService()
+    response = dynamodb_service.remove_organization(
+        org_id=remove_request.organization_id,
+        org_admin_id=remove_request.organization_admin_id,
+    )
+
+    if not response:
+        logger.error(
+            "remove_request=%s, error=Failed to remove organization", remove_request
+        )
+        return ErrorDTO(
+            code=HTTPStatus.BAD_REQUEST.value,
+            description="Failed to remove organization",
+        )
+
+    logger.info("remove_request=%s, response=%s", remove_request, response)
+
+    # TODO: remove organization related data
+
+    return RemoveOrganizationResponse(status=HTTPStatus.OK.value)
 
 
 @router.get(
