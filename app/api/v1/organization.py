@@ -57,9 +57,6 @@ async def register_organization(
         not register_request.organization_name
         or not register_request.organization_admin_id
     ):
-        logger.error(
-            "Invalid RegisterOrganizationRequest. register_request=%s", register_request
-        )
         return ErrorDTO(
             code=HTTPStatus.BAD_REQUEST.value,
             description="Invalid RegisterOrganizationRequest",
@@ -78,7 +75,8 @@ async def register_organization(
 
     if not response:
         logger.error(
-            "Failed to register organization. register_request=%s", register_request
+            "register_request=%s, error=Failed to register organization",
+            register_request,
         )
         return ErrorDTO(
             code=HTTPStatus.FORBIDDEN.value,
@@ -102,7 +100,6 @@ async def get_organization(
     org_id: str,
 ):
     if not org_id:
-        logger.error("Invalid organization ID. org_id=%s", org_id)
         return ErrorDTO(
             code=HTTPStatus.BAD_REQUEST.value,
             description="Invalid organization ID",
@@ -114,7 +111,7 @@ async def get_organization(
     response = dynamodb_service.get_organization(org_id)
 
     if not response:
-        logger.error("Organization does not exist. org_id=%s", org_id)
+        logger.error("org_id=%s, error=Organization does not exist", org_id)
         return ErrorDTO(
             code=HTTPStatus.FORBIDDEN.value,
             description="Organization does not exist",
@@ -143,7 +140,7 @@ async def update_organization(org_id: str, update_request: UpdateOrganizationReq
         or update_request.prev_organization_admin_id
     ):
         logger.error(
-            "Invalid organization update request. org_id=%s, update_request=%s",
+            "org_id=%s, update_request=%s, error=Invalid organization update request",
             org_id,
             update_request,
         )
@@ -159,6 +156,11 @@ async def update_organization(org_id: str, update_request: UpdateOrganizationReq
     timestamp = str(time.time())
 
     if not response:
+        logger.error(
+            "org_id=%s, update_request=%s error=Organization does not exist",
+            org_id,
+            update_request,
+        )
         return ErrorDTO(
             code=HTTPStatus.BAD_REQUEST.value,
             description="Organization does not exist",
@@ -166,6 +168,11 @@ async def update_organization(org_id: str, update_request: UpdateOrganizationReq
 
     org = to_organization_model(response)
     if org.admin_id != update_request.prev_organization_admin_id:
+        logger.error(
+            "org_id=%s, update_request=%s error=no permission to edit this organization",
+            org_id,
+            update_request,
+        )
         return ErrorDTO(
             code=HTTPStatus.FORBIDDEN.value,
             description="You don't have permission to edit this organization",
@@ -216,6 +223,7 @@ async def get_organization_users(
     response = dynamodb_service.get_organization(org_id)
 
     if not response:
+        logger.error("org_id=%s, error=Organization does not exist", org_id)
         return ErrorDTO(
             code=HTTPStatus.BAD_REQUEST.value,
             description="Organization does not exist",
@@ -260,6 +268,11 @@ async def invite_user_to_organization(
     )
 
     if not invited_response:
+        logger.error(
+            "org_id=%s, invite_request=%s, error=Org does not exist or user already invited",
+            org_id,
+            invite_request,
+        )
         return ErrorDTO(
             code=HTTPStatus.BAD_REQUEST.value,
             description="Organization does not exist or user has been already invited",
@@ -273,6 +286,11 @@ async def invite_user_to_organization(
     )
 
     if not whitelist_response:
+        logger.error(
+            "org_id=%s, invite_request=%s, error=Failed to add user to whitelist",
+            org_id,
+            invite_request,
+        )
         return ErrorDTO(
             code=HTTPStatus.BAD_REQUEST.value,
             description="Failed to add user to whitelist",
@@ -286,6 +304,11 @@ async def invite_user_to_organization(
     )
 
     if not response:
+        logger.error(
+            "org_id=%s, invite_request=%s, error=Failed to send invitation email",
+            org_id,
+            invite_request,
+        )
         return ErrorDTO(
             code=HTTPStatus.INTERNAL_SERVER_ERROR.value,
             description="Failed to send invitation email",
@@ -329,6 +352,11 @@ async def cancel_pending_user_invite(
     )
 
     if not invited_response:
+        logger.error(
+            "org_id=%s, cancel_request=%s, error=Org does not exist or user not invited",
+            org_id,
+            cancel_request,
+        )
         return ErrorDTO(
             code=HTTPStatus.BAD_REQUEST.value,
             description="Organization does not exist or user not invited",
@@ -342,6 +370,11 @@ async def cancel_pending_user_invite(
     )
 
     if not whitelist_response:
+        logger.error(
+            "org_id=%s, cancel_request=%s, error=Failed to remove user from whitelist",
+            org_id,
+            cancel_request,
+        )
         return ErrorDTO(
             code=HTTPStatus.BAD_REQUEST.value,
             description="Failed to remove user from whitelist",

@@ -60,14 +60,16 @@ async def generate_link_token(
         generate_request.email_address,
     )
 
-    logger.info("generate_request=%s, link_token=%s", generate_request, link_token)
-
     if not link_token:
+        logger.error(
+            "generate_request=%s, error=Could not generate link_token", generate_request
+        )
         return ErrorDTO(
             code=HTTPStatus.SERVICE_UNAVAILABLE.value,
             description="Service is not available",
         )
 
+    logger.info("generate_request=%s, link_token=%s", generate_request, link_token)
     return GenerateLinkTokenResponse(status=HTTPStatus.OK.value, link_token=link_token)
 
 
@@ -103,6 +105,10 @@ async def integration(
     )
 
     if not account_token:
+        logger.error(
+            "integration_request=%s, error=Failed to generate account token",
+            integration_request,
+        )
         return ErrorDTO(
             code=HTTPStatus.SERVICE_UNAVAILABLE.value,
             description="Failed to fetch account token",
@@ -113,6 +119,10 @@ async def integration(
     response = dynamodb_service.get_organization(integration_request.organization_id)
 
     if not response:
+        logger.error(
+            "integration_request=%s, error=No such organization exists",
+            integration_request,
+        )
         return ErrorDTO(
             code=HTTPStatus.BAD_REQUEST.value,
             description="No such organization exists",
@@ -173,6 +183,7 @@ async def get_integration_detail(
     response = dynamodb_service.get_organization(org_id)
 
     if not response:
+        logger.error("org_id=%s, error=No such organization exists", org_id)
         return ErrorDTO(
             code=HTTPStatus.BAD_REQUEST.value,
             description="No such organization exists",
@@ -224,6 +235,11 @@ async def remove_integration_detail(
     response = dynamodb_service.get_organization(org_id)
 
     if not response:
+        logger.error(
+            "org_id=%s, integration_account_token=%s, error=No such org exists",
+            org_id,
+            integration,
+        )
         return ErrorDTO(
             code=HTTPStatus.BAD_REQUEST.value,
             description="No such organization exists",
