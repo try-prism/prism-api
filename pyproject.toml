@@ -27,6 +27,11 @@ ruff = "^0.0.281"
 isort = "^5.12.0"
 
 [tool.ruff]
+select = [
+  "E",   # pycodestyle
+  "F",   # pyflakes
+  "UP",  # pyupgrade
+]
 line-length = 100
 
 [build-system]

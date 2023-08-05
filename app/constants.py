@@ -30,6 +30,11 @@ DYNAMODB_WHITELIST_TABLE = os.environ["DYNAMODB_WHITELIST_TABLE"]
 S3_FILE_BUCKET = os.environ["S3_FILE_BUCKET"]
 
 
+# SES Configurations
+SES_SENDER_EMAIL = "noreply@tryprism.ai"
+DEFAULT_SIGNUP_URL = "http://tryprism.ai/signup?user="
+
+
 # Zilliz Cloud
 ZILLIZ_CLOUD_HOST = os.environ["ZILLIZ_CLOUD_HOST"]
 ZILLIZ_CLOUD_PORT = os.environ["ZILLIZ_CLOUD_PORT"]

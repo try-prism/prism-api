@@ -240,7 +240,9 @@ async def invite_user_to_organization(
 
     ses_serivce = SESService()
     response = ses_serivce.send_signup_email(
-        email=invite_request.organization_user_email, user_id=user_uuid
+        org_name=invite_request.organization_name,
+        user_email=invite_request.organization_user_email,
+        user_id=user_uuid,
     )
 
     if not response:
