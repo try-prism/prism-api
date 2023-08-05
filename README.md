@@ -1,6 +1,6 @@
-# api
+# prism-api
 
-Prism Backend implemented with FastAPi
+Prism Backend implemented with FastAPI
 
 ## Setup
 
@@ -59,18 +59,18 @@ Run the following command
 pre-commit run --all-files
 ```
 
+You can also fix auto-fixable ruff erros by running the following command
+
+```bash
+ruff check . --fix
+```
+
 ## Adding new packages
 
 Use the following command
 
 ```bash
 poetry add [PACKAGE_NAME]
-```
-
-You can also fix auto-fixable ruff erros by running the following command
-
-```bash
-ruff check . --fix
 ```
 
 ## ETC
