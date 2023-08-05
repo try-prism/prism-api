@@ -12,9 +12,12 @@ class SESService:
     def __init__(self):
         self.client = boto3.client("ses")
 
-    def send_signup_email(self, org_name: str, user_email: str, user_id: str) -> bool:
+    def send_signup_email(
+        self, org_name: str, org_user_email: str, org_user_id: str
+    ) -> bool:
         logger.info(
-            f"Sending signup email. org_name={org_name}, user_email={user_email}, user_id={user_id}"
+            f"Sending signup email. org_name={org_name}, "
+            f"user_email={org_user_email}, org_user_id={org_user_id}"
         )
 
         try:
@@ -22,7 +25,7 @@ class SESService:
                 Source=SES_SENDER_EMAIL,
                 Destination={
                     "ToAddresses": [
-                        user_email,
+                        org_user_email,
                     ],
                     "CcAddresses": [],
                     "BccAddresses": [],
@@ -37,14 +40,14 @@ class SESService:
                             "Charset": "UTF-8",
                             "Data": (
                                 f"You have been invited to join the {org_name} workspace."
-                                f"Click here to sign up.\n{DEFAULT_SIGNUP_URL + user_id}"
+                                f"Click here to sign up.\n{DEFAULT_SIGNUP_URL + org_user_id}"
                             ),
                         },
                         "Html": {
                             "Charset": "UTF-8",
                             "Data": (
                                 f"<p>You have been invited to join the {org_name} workspace.</p>"
-                                f'<p><a href="{DEFAULT_SIGNUP_URL + user_id}" target="_blank">'
+                                f'<p><a href="{DEFAULT_SIGNUP_URL + org_user_id}" target="_blank">'
                                 f"Click here to sign up</a></p>"
                             ),
                         },
@@ -53,12 +56,13 @@ class SESService:
                 ReplyToAddresses=[],
             )
             logger.info(
-                f"org_name={org_name}, user_email={user_email}, "
-                f"user_id={user_id}, response={response}"
+                f"org_name={org_name}, org_user_email={org_user_email}, "
+                f"org_user_id={org_user_id}, response={response}"
             )
         except Exception as e:
             logger.error(
-                f"org_name={org_name}, user_email={user_email}, user_id={user_id}, {str(e)}"
+                f"org_name={org_name}, org_user_email={org_user_email}, "
+                f"org_user_id={org_user_id}, {str(e)}"
             )
             return False
 

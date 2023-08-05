@@ -34,6 +34,7 @@ logger = logging.getLogger(__name__)
 | `/organization/{org_id}`             | Update a organization's admin id      | PATCH  |
 | `/organization/{org_id}/user`        | Retrieve users of a organization      | GET    |
 | `/organization/{org_id}/user`        | Invite a user to a organization       | POST   |
+| `/organization/{org_id}/user`        | Candel pending user invite            | DELETE |
 """
 
 
@@ -233,16 +234,36 @@ async def invite_user_to_organization(
     logger.info(f"org_id={org_id}, invite_request={invite_request}")
 
     dynamodb_service = DynamoDBService()
-    user_uuid = str(uuid.uuid4())
-    dynamodb_service.add_to_whitelist(
-        org_id=org_id, org_name=invite_request.organization_name, org_user_id=user_uuid
+    org_user_id = str(uuid.uuid4())
+
+    invited_response = dynamodb_service.modify_invited_users_list(
+        org_id=org_id, org_user_id=org_user_id, is_remove=False
     )
+
+    if not invited_response:
+        return ErrorDTO(
+            code=HTTPStatus.BAD_REQUEST.value,
+            description="Organization does not exist or user has been already invited",
+        )
+
+    whitelist_response = dynamodb_service.modify_whitelist(
+        org_id=org_id,
+        org_name=invite_request.organization_name,
+        org_user_id=org_user_id,
+        is_remove=False,
+    )
+
+    if not whitelist_response:
+        return ErrorDTO(
+            code=HTTPStatus.BAD_REQUEST.value,
+            description="Failed to add user to whitelist",
+        )
 
     ses_serivce = SESService()
     response = ses_serivce.send_signup_email(
         org_name=invite_request.organization_name,
-        user_email=invite_request.organization_user_email,
-        user_id=user_uuid,
+        org_user_email=invite_request.organization_user_email,
+        org_user_id=org_user_id,
     )
 
     if not response:

@@ -240,10 +240,10 @@ async def remove_integration_detail(
         dynamodb_service.get_client().update_item(
             TableName=DYNAMODB_ORGANIZATION_TABLE,
             Key={"id": {"S": org_id}},
-            UpdateExpression="SET link_id_map = :map, last_updated = :lu",
+            UpdateExpression="SET link_id_map = :map, updated_at = :ua",
             ExpressionAttributeValues={
                 ":map": {"M": link_id_map},
-                ":lu": {"S": timestamp},
+                ":ua": {"S": timestamp},
             },
         )
     except ClientError as e:

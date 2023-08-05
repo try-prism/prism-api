@@ -96,10 +96,10 @@ class DataIndexingService:
             dynamodb_service.get_client().update_item(
                 TableName=DYNAMODB_ORGANIZATION_TABLE,
                 Key={"id": {"S": self.org_id}},
-                UpdateExpression="SET index_id = :id, last_updated = :lu",
+                UpdateExpression="SET index_id = :id, updated_at = :ua",
                 ExpressionAttributeValues={
                     ":id": {"S": ray_docs_index.index_id},
-                    ":lu": {"S": timestamp},
+                    ":ua": {"S": timestamp},
                 },
             )
         except ClientError as e:
