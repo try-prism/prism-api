@@ -59,6 +59,12 @@ Run the following command
 pre-commit run --all-files
 ```
 
+You can also fix auto-fixable ruff erros by running the following command
+
+```bash
+ruff check . --fix
+```
+
 ## Adding new packages
 
 Use the following command
