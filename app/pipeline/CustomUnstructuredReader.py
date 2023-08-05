@@ -7,7 +7,7 @@ Original: llama_hub/file/unstructured/base.py
 A parser for unstructured text files using Unstructured.io.
 Supports .html, .rtf, .txt, .csv, .doc, .docx, .pdf, .ppt, .pptx, and .xlsx documents.
 """
-from typing import IO, Any, Dict, List, Optional
+from typing import IO, Any
 
 from llama_index.readers.base import BaseReader
 from llama_index.readers.schema.base import Document
@@ -29,9 +29,9 @@ class CustomUnstructuredReader(BaseReader):
     def load_data(
         self,
         file: IO[bytes],
-        extra_info: Optional[Dict] = None,
-        split_documents: Optional[bool] = False,
-    ) -> List[Document]:
+        extra_info: dict | None = None,
+        split_documents: bool | None = False,
+    ) -> list[Document]:
         """Parse file."""
         from unstructured.partition.auto import partition
 

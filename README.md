@@ -67,6 +67,12 @@ Use the following command
 poetry add [PACKAGE_NAME]
 ```
 
+You can also fix auto-fixable ruff erros by running the following command
+
+```bash
+ruff check . --fix
+```
+
 ## ETC
 
 ### Delete **pycache**
