@@ -54,14 +54,19 @@ class DataIndexingService:
 
     def store_docs_to_docstore(self, nodes: Sequence[BaseNode]) -> bool:
         logger.info(
-            "Storing docs to docstore. org_id={self.org_id}, account_token={self.account_token}"
+            "Storing docs to docstore. org_id=%s, account_token=%s",
+            self.org_id,
+            self.account_token,
         )
 
         try:
             self.storage_context.docstore.add_documents(nodes)
         except Exception as e:
             logger.error(
-                f"org_id={self.org_id}, account_token={self.account_token}, {str(e)}"
+                "org_id=%s, account_token=%s, error=%s",
+                self.org_id,
+                self.account_token,
+                str(e),
             )
             return False
 
@@ -69,7 +74,9 @@ class DataIndexingService:
 
     def store_vectors(self, nodes: Sequence[BaseNode]) -> bool:
         logger.info(
-            "Storing vectors & index. org_id={self.org_id}, account_token={self.account_token}"
+            "Storing vectors & index. org_id=%s, account_token=%s",
+            self.org_id,
+            self.account_token,
         )
 
         try:
@@ -78,7 +85,10 @@ class DataIndexingService:
             )
         except Exception as e:
             logger.error(
-                f"org_id={self.org_id}, account_token={self.account_token}, {str(e)}"
+                "org_id=%s, account_token=%s, error=%s",
+                self.org_id,
+                self.account_token,
+                str(e),
             )
             return False
 
@@ -87,7 +97,11 @@ class DataIndexingService:
         response = dynamodb_service.get_organization(self.org_id)
 
         if not response:
-            logger.error("Organization does not exist")
+            logger.error(
+                "org_id=%s, account_token=%s, error=Organization does not exist",
+                self.org_id,
+                self.account_token,
+            )
             return False
 
         timestamp = str(time.time())
@@ -96,15 +110,18 @@ class DataIndexingService:
             dynamodb_service.get_client().update_item(
                 TableName=DYNAMODB_ORGANIZATION_TABLE,
                 Key={"id": {"S": self.org_id}},
-                UpdateExpression="SET index_id = :id, last_updated = :lu",
+                UpdateExpression="SET index_id = :id, updated_at = :ua",
                 ExpressionAttributeValues={
                     ":id": {"S": ray_docs_index.index_id},
-                    ":lu": {"S": timestamp},
+                    ":ua": {"S": timestamp},
                 },
             )
         except ClientError as e:
             logger.error(
-                f"org_id={self.org_id}, account_token={self.account_token}, {str(e)}"
+                "org_id=%s, account_token=%s, error=%s",
+                self.org_id,
+                self.account_token,
+                str(e),
             )
             return False
 
@@ -112,14 +129,16 @@ class DataIndexingService:
 
     def load_vector_index(self) -> VectorStoreIndex | None:
         logger.info(
-            "Loading vector index. org_id={self.org_id}, account_token={self.account_token}"
+            "Loading vector index. org_id=%s, account_token=%s",
+            self.org_id,
+            self.account_token,
         )
 
         dynamodb_service = DynamoDBService()
         response = dynamodb_service.get_organization(self.org_id)
 
         if not response:
-            logger.error("Organization does not exist")
+            logger.error("org_id=%s, error=Organization does not exist", self.org_id)
             return None
 
         org_item = response["Item"]

@@ -50,7 +50,7 @@ class DataPipelineService:
         return [{"doc": doc} for doc in documents]
 
     def load_data(self, all_files: list[File]) -> Dataset:
-        logger.info(f"Started loading data. account_token={self.account_token}")
+        logger.info("Started loading data. account_token=%s", self.account_token)
 
         # Get the file data from all files & Create the Ray Dataset pipeline
         all_items = [{"data": file} for file in all_files]
@@ -59,7 +59,7 @@ class DataPipelineService:
         # Use `flat_map` since there is a 1:N relationship.
         # Each filepath returns multiple documents.
         loaded_docs = ds.flat_map(self.load_and_parse_files)
-        logger.info(f"Finished loading data. account_token={self.account_token}")
+        logger.info("Finished loading data. account_token=", self.account_token)
 
         return loaded_docs
 
@@ -75,11 +75,11 @@ class DataPipelineService:
         return [{"node": node} for node in nodes]
 
     def generate_nodes(self, loaded_docs: Dataset) -> Dataset:
-        logger.info(f"Started generating nodes. account_token={self.account_token}")
+        logger.info("Started generating nodes. account_token=%s", self.account_token)
 
         # Use `flat_map` since there is a 1:N relationship. Each document returns multiple nodes.
         nodes = loaded_docs.flat_map(self.convert_documents_into_nodes)
-        logger.info(f"Finished generating nodes. account_token={self.account_token}")
+        logger.info("Finished generating nodes. account_token=%s", self.account_token)
 
         return nodes
 

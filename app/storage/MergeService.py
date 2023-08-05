@@ -56,7 +56,9 @@ class MergeService:
                 page_size=page_size, cursor=next
             )
         except Exception as e:
-            logger.error(f"account_token={self.account_token}, next={next}, {str(e)}")
+            logger.error(
+                "account_token=%s, next=%s, error=%s", self.account_token, next, str(e)
+            )
             return None
 
         return file_list
@@ -71,14 +73,17 @@ class MergeService:
         file_extension = file.name.split(".")[-1]
 
         if file_extension not in SUPPORTED_EXTENSIONS:
-            logger.error(f"File type not supported: .{file_extension}")
+            logger.error("File type not supported: .%s", file_extension)
             return
 
         try:
             response = self.client.filestorage.files.download_retrieve(id=file.id)
         except Exception as e:
             logger.error(
-                f"account_token={self.account_token}, file_id={file.id}, {str(e)}"
+                "account_token=%s, file_id=%s, error=%s",
+                self.account_token,
+                file.id,
+                str(e),
             )
             return None
 

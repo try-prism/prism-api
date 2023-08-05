@@ -60,14 +60,16 @@ async def generate_link_token(
         generate_request.email_address,
     )
 
-    logger.info(f"generate_request={generate_request}, link_token={link_token}")
-
     if not link_token:
+        logger.error(
+            "generate_request=%s, error=Could not generate link_token", generate_request
+        )
         return ErrorDTO(
             code=HTTPStatus.SERVICE_UNAVAILABLE.value,
             description="Service is not available",
         )
 
+    logger.info("generate_request=%s, link_token=%s", generate_request, link_token)
     return GenerateLinkTokenResponse(status=HTTPStatus.OK.value, link_token=link_token)
 
 
@@ -103,6 +105,10 @@ async def integration(
     )
 
     if not account_token:
+        logger.error(
+            "integration_request=%s, error=Failed to generate account token",
+            integration_request,
+        )
         return ErrorDTO(
             code=HTTPStatus.SERVICE_UNAVAILABLE.value,
             description="Failed to fetch account token",
@@ -113,6 +119,10 @@ async def integration(
     response = dynamodb_service.get_organization(integration_request.organization_id)
 
     if not response:
+        logger.error(
+            "integration_request=%s, error=No such organization exists",
+            integration_request,
+        )
         return ErrorDTO(
             code=HTTPStatus.BAD_REQUEST.value,
             description="No such organization exists",
@@ -166,13 +176,14 @@ async def get_integration_detail(
             code=HTTPStatus.BAD_REQUEST.value, description="Invalid organization id"
         )
 
-    logger.info(f"org_id={org_id}")
+    logger.info("org_id=%s", org_id)
 
     # Retrieve organization's integration details
     dynamodb_service = DynamoDBService()
     response = dynamodb_service.get_organization(org_id)
 
     if not response:
+        logger.error("org_id=%s, error=No such organization exists", org_id)
         return ErrorDTO(
             code=HTTPStatus.BAD_REQUEST.value,
             description="No such organization exists",
@@ -182,7 +193,7 @@ async def get_integration_detail(
 
     try:
         link_id_map = org_item.get("link_id_map", {"M": {}})["M"]
-        logger.info(f"link_id_map={link_id_map}")
+        logger.info("org_id=%s, link_id_map=%s", org_id, link_id_map)
         return IntegrationDetailResponse(
             status=HTTPStatus.OK.value, integrations=link_id_map
         )
@@ -216,7 +227,7 @@ async def remove_integration_detail(
         )
 
     logger.info(
-        f"org_id={org_id}, integration_account_token={integration_account_token}"
+        "org_id=%s, integration_account_token=%s", org_id, integration_account_token
     )
 
     # Remove organization's integration detail
@@ -224,6 +235,11 @@ async def remove_integration_detail(
     response = dynamodb_service.get_organization(org_id)
 
     if not response:
+        logger.error(
+            "org_id=%s, integration_account_token=%s, error=No such org exists",
+            org_id,
+            integration,
+        )
         return ErrorDTO(
             code=HTTPStatus.BAD_REQUEST.value,
             description="No such organization exists",
@@ -234,16 +250,16 @@ async def remove_integration_detail(
 
     try:
         link_id_map = org_item.get("link_id_map", {"M": {}})["M"]
-        logger.info(f"link_id_map={link_id_map}")
+        logger.info("org_id=%s, link_id_map=%s", org_id, link_id_map)
         del link_id_map[integration_account_token]
 
         dynamodb_service.get_client().update_item(
             TableName=DYNAMODB_ORGANIZATION_TABLE,
             Key={"id": {"S": org_id}},
-            UpdateExpression="SET link_id_map = :map, last_updated = :lu",
+            UpdateExpression="SET link_id_map = :map, updated_at = :ua",
             ExpressionAttributeValues={
                 ":map": {"M": link_id_map},
-                ":lu": {"S": timestamp},
+                ":ua": {"S": timestamp},
             },
         )
     except ClientError as e:

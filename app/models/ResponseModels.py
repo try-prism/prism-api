@@ -30,6 +30,10 @@ class RegisterOrganizationResponse(BaseModel):
     status: int
 
 
+class RemoveOrganizationResponse(BaseModel):
+    status: int
+
+
 class GetOrganizationResponse(BaseModel):
     status: int
     organization: OrganizationModel
@@ -40,4 +44,8 @@ class UpdateOrganizationResponse(BaseModel):
 
 
 class InviteUserOrganizationResponse(BaseModel):
+    status: int
+
+
+class CancelInviteUserOrganizationResponse(BaseModel):
     status: int
