@@ -3,7 +3,11 @@ import time
 
 import boto3
 from botocore.exceptions import ClientError
-from constants import DYNAMODB_ORGANIZATION_TABLE, DYNAMODB_WHITELIST_TABLE
+from constants import (
+    DYNAMODB_ORGANIZATION_TABLE,
+    DYNAMODB_USER_TABLE,
+    DYNAMODB_WHITELIST_TABLE,
+)
 from models import to_organization_model
 
 logger = logging.getLogger(__name__)
@@ -173,3 +177,33 @@ class DynamoDBService:
         )
 
         return update_response
+
+    def get_whitelist_user_data(self, user_id: str) -> dict | None:
+        key = {"id": {"S": user_id}}
+        response = self.get_item(DYNAMODB_WHITELIST_TABLE, key)
+
+        return response
+
+    def register_user(
+        self, id: str, email: str, name: str, organization_id: str
+    ) -> bool:
+        timestamp = str(time.time())
+        new_user = {
+            "id": {"S": id},
+            "email": {"S": email},
+            "name": {"S": name},
+            "organization_id": {"S": organization_id},
+            "access_control": {"M": {}},
+            "created_at": {"S": timestamp},
+            "updated_at": {"S": timestamp},
+        }
+
+        response = self.put_item(DYNAMODB_USER_TABLE, new_user)
+
+        return response
+
+    def get_user(self, user_id: str) -> dict | None:
+        key = {"id": {"S": user_id}}
+        response = self.get_item(DYNAMODB_USER_TABLE, key)
+
+        return response

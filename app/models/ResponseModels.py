@@ -1,6 +1,8 @@
 from pydantic import BaseModel
 
 from .OrganizationModel import OrganizationModel
+from .UserModel import UserModel
+from .WhitelistModel import WhitelistModel
 
 
 class ErrorDTO(BaseModel):
@@ -49,3 +51,17 @@ class InviteUserOrganizationResponse(BaseModel):
 
 class CancelInviteUserOrganizationResponse(BaseModel):
     status: int
+
+
+class RegisterUserResponse(BaseModel):
+    status: int
+
+
+class GetUserResponse(BaseModel):
+    status: int
+    user: UserModel
+
+
+class GetInvitationResponse(BaseModel):
+    status: int
+    invitation: WhitelistModel
