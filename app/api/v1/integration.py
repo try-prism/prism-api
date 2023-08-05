@@ -5,7 +5,6 @@ from http import HTTPStatus
 from botocore.exceptions import ClientError
 from constants import DYNAMODB_ORGANIZATION_TABLE
 from fastapi import APIRouter, Header
-from fastapi.responses import JSONResponse
 from models.RequestModels import GenerateLinkTokenRequest, IntegrationRequest
 from models.ResponseModels import (
     ErrorDTO,
@@ -47,12 +46,9 @@ async def generate_link_token(
         or not generate_request.organization_name
         or not generate_request.email_address
     ):
-        return JSONResponse(
-            status_code=400,
-            content={
-                "code": HTTPStatus.BAD_REQUEST,
-                "description": "Invalid GenerateLinkTokenRequest",
-            },
+        return ErrorDTO(
+            code=HTTPStatus.BAD_REQUEST.value,
+            description="Invalid GenerateLinkTokenRequest",
         )
 
     logger.info(generate_request)
@@ -67,8 +63,9 @@ async def generate_link_token(
     logger.info(f"generate_request={generate_request}, link_token={link_token}")
 
     if not link_token:
-        return GenerateLinkTokenResponse(
-            status=HTTPStatus.SERVICE_UNAVAILABLE.value, link_token=""
+        return ErrorDTO(
+            code=HTTPStatus.SERVICE_UNAVAILABLE.value,
+            description="Service is not available",
         )
 
     return GenerateLinkTokenResponse(status=HTTPStatus.OK.value, link_token=link_token)
@@ -93,12 +90,8 @@ async def integration(
         or not integration_request.organization_name
         or not integration_request.email_address
     ):
-        return JSONResponse(
-            status_code=400,
-            content={
-                "code": HTTPStatus.BAD_REQUEST,
-                "description": "Invalid IntegrationRequest",
-            },
+        return ErrorDTO(
+            code=HTTPStatus.BAD_REQUEST.value, description="Invalid IntegrationRequest"
         )
 
     logger.info(integration_request)
@@ -110,19 +103,19 @@ async def integration(
     )
 
     if not account_token:
-        return IntegrationResponse(status=HTTPStatus.SERVICE_UNAVAILABLE.value)
+        return ErrorDTO(
+            code=HTTPStatus.SERVICE_UNAVAILABLE.value,
+            description="Failed to fetch account token",
+        )
 
     # Add account_token to organization's link_id_map
     dynamodb_service = DynamoDBService()
     response = dynamodb_service.get_organization(integration_request.organization_id)
 
     if not response:
-        return JSONResponse(
-            status_code=400,
-            content={
-                "code": HTTPStatus.BAD_REQUEST,
-                "description": "No such organization exists",
-            },
+        return ErrorDTO(
+            code=HTTPStatus.BAD_REQUEST.value,
+            description="No such organization exists",
         )
 
     org_item = response["Item"]
@@ -145,7 +138,10 @@ async def integration(
         )
     except ClientError as e:
         logger.error(str(e))
-        return IntegrationResponse(status=HTTPStatus.FORBIDDEN.value)
+        return ErrorDTO(
+            code=HTTPStatus.BAD_REQUEST.value,
+            description=str(e),
+        )
 
     # TODO: process file processing here
 
@@ -166,12 +162,8 @@ async def get_integration_detail(
     org_id: str,
 ):
     if not org_id:
-        return JSONResponse(
-            status_code=400,
-            content={
-                "code": HTTPStatus.BAD_REQUEST,
-                "description": "Invalid organization id",
-            },
+        return ErrorDTO(
+            code=HTTPStatus.BAD_REQUEST.value, description="Invalid organization id"
         )
 
     logger.info(f"org_id={org_id}")
@@ -181,12 +173,9 @@ async def get_integration_detail(
     response = dynamodb_service.get_organization(org_id)
 
     if not response:
-        return JSONResponse(
-            status_code=400,
-            content={
-                "code": HTTPStatus.BAD_REQUEST,
-                "description": "No such organization exists",
-            },
+        return ErrorDTO(
+            code=HTTPStatus.BAD_REQUEST.value,
+            description="No such organization exists",
         )
 
     org_item = response["Item"]
@@ -200,8 +189,9 @@ async def get_integration_detail(
 
     except ClientError as e:
         logger.error(str(e))
-        return IntegrationDetailResponse(
-            status=HTTPStatus.FORBIDDEN.value, integrations=[]
+        return ErrorDTO(
+            code=HTTPStatus.BAD_REQUEST.value,
+            description=str(e),
         )
 
 
@@ -220,12 +210,9 @@ async def remove_integration_detail(
     integration_account_token: str = Header(),
 ):
     if not org_id or not integration_account_token:
-        return JSONResponse(
-            status_code=400,
-            content={
-                "code": HTTPStatus.BAD_REQUEST,
-                "description": "Invalid organization id or account token",
-            },
+        return ErrorDTO(
+            code=HTTPStatus.BAD_REQUEST.value,
+            description="Invalid organization id or account token",
         )
 
     logger.info(
@@ -237,12 +224,9 @@ async def remove_integration_detail(
     response = dynamodb_service.get_organization(org_id)
 
     if not response:
-        return JSONResponse(
-            status_code=400,
-            content={
-                "code": HTTPStatus.BAD_REQUEST,
-                "description": "No such organization exists",
-            },
+        return ErrorDTO(
+            code=HTTPStatus.BAD_REQUEST.value,
+            description="No such organization exists",
         )
 
     org_item = response["Item"]

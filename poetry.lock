@@ -5635,24 +5635,6 @@ files = [
 ]
 
 [[package]]
-name = "tika"
-version = "2.6.0"
-description = "Apache Tika Python library"
-optional = false
-python-versions = "*"
-files = [
-    {file = "tika-2.6.0.tar.gz", hash = "sha256:56670eb812944eb25ed73f1b3b075aa41e7a135b74b240822f28b819e5b373da"},
-]
-
-[package.dependencies]
-requests = "*"
-setuptools = "*"
-
-[package.extras]
-all = ["memory-profiler (>=0.57.0)", "memory-profiler (>=0.57.0)", "pytest-benchmark (>=3.2.2)", "pytest-benchmark (>=3.2.2)"]
-tests = ["memory-profiler (>=0.57.0)", "pytest-benchmark (>=3.2.2)"]
-
-[[package]]
 name = "tiktoken"
 version = "0.4.0"
 description = "tiktoken is a fast BPE tokeniser for use with OpenAI's models"
@@ -6837,4 +6819,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "d76e4d70732c3671a152f0c6c45e939132964f257dfa8687c65c5cae9866e1e1"
+content-hash = "c9a389216e787927a7493340629a6ecd655ff7407ce4df31155af589dd192905"

@@ -1,4 +1,5 @@
 import logging
+import time
 from typing import Union
 
 import boto3
@@ -21,11 +22,17 @@ class DynamoDBService:
     def get_client(self):
         return self.client
 
-    def put_item(self, table_name: str, item: dict) -> None:
-        self.client.put_item(
-            Item=item,
-            TableName=table_name,
-        )
+    def put_item(self, table_name: str, item: dict) -> bool:
+        try:
+            self.client.put_item(
+                Item=item,
+                TableName=table_name,
+            )
+        except Exception as e:
+            logger.error(f"table_name={table_name}, item={item}, {str(e)}")
+            return False
+
+        return True
 
     def get_item(self, table_name: str, key: dict) -> Union[dict, None]:
         response = self.client.get_item(
@@ -45,6 +52,26 @@ class DynamoDBService:
 
         if "Item" not in response:
             return None
+
+        return response
+
+    def register_organization(
+        self, org_id: str, org_name: str, org_admin_id: str
+    ) -> bool:
+        timestamp = str(time.time())
+        new_organization = {
+            "id": {"S": org_id},
+            "name": {"S": org_name},
+            "admin_id": {"S": org_admin_id},
+            "user_list": {"L": [org_admin_id]},
+            "index_id": {"S": ""},
+            "link_id_map": {"M": {}},
+            "document_list": {"L": []},
+            "created_at": {"S": timestamp},
+            "updated_at": {"S": timestamp},
+        }
+
+        response = self.put_item(DYNAMODB_ORGANIZATION_TABLE, new_organization)
 
         return response
 

@@ -1,5 +1,7 @@
 from pydantic import BaseModel
 
+from .OrganizationModel import OrganizationModel
+
 
 class ErrorDTO(BaseModel):
     code: int
@@ -21,4 +23,17 @@ class IntegrationDetailResponse(BaseModel):
 
 
 class IntegrationRemoveResponse(BaseModel):
+    status: int
+
+
+class RegisterOrganizationResponse(BaseModel):
+    status: int
+
+
+class GetOrganizationResponse(BaseModel):
+    status: int
+    organization: OrganizationModel
+
+
+class UpdateOrganizationResponse(BaseModel):
     status: int
