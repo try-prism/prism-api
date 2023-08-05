@@ -3,6 +3,7 @@ import time
 from typing import Union
 
 import boto3
+from botocore.exceptions import ClientError
 from constants import DYNAMODB_ORGANIZATION_TABLE
 
 logger = logging.getLogger(__name__)
@@ -28,7 +29,7 @@ class DynamoDBService:
                 Item=item,
                 TableName=table_name,
             )
-        except Exception as e:
+        except ClientError as e:
             logger.error(f"table_name={table_name}, item={item}, {str(e)}")
             return False
 

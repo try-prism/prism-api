@@ -3,6 +3,7 @@ import time
 from typing import Sequence, Union
 
 import tiktoken
+from botocore.exceptions import ClientError
 from constants import (
     DEFAULT_OPENAI_MODEL,
     DYNAMODB_ORGANIZATION_TABLE,
@@ -101,7 +102,7 @@ class DataIndexingService:
                     ":lu": {"S": timestamp},
                 },
             )
-        except Exception as e:
+        except ClientError as e:
             logger.error(
                 f"org_id={self.org_id}, account_token={self.account_token}, {str(e)}"
             )
