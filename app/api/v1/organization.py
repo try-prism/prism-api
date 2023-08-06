@@ -5,6 +5,7 @@ from http import HTTPStatus
 
 from botocore.exceptions import ClientError
 from constants import DYNAMODB_ORGANIZATION_TABLE
+from exceptions import PrismDBException
 from fastapi import APIRouter
 from models import to_organization_model
 from models.RequestModels import (
@@ -68,20 +69,17 @@ async def register_organization(
 
     dynamodb_service = DynamoDBService()
 
-    response = dynamodb_service.register_organization(
-        org_id=org_id,
-        org_name=register_request.organization_name,
-        org_admin_id=register_request.organization_admin_id,
-    )
-
-    if not response:
-        logger.error(
-            "register_request=%s, error=Failed to register organization",
-            register_request,
+    try:
+        dynamodb_service.register_organization(
+            org_id=org_id,
+            org_name=register_request.organization_name,
+            org_admin_id=register_request.organization_admin_id,
         )
+    except PrismDBException as e:
+        logger.error("register_request=%s, error=%s", register_request, e)
         return ErrorDTO(
-            code=HTTPStatus.FORBIDDEN.value,
-            description="Failed to register organization",
+            code=e.code,
+            description=e.message,
         )
 
     return RegisterOrganizationResponse(status=HTTPStatus.OK.value)
@@ -109,19 +107,14 @@ async def remove_organization(
     logger.info("remove_request=%s", remove_request)
 
     dynamodb_service = DynamoDBService()
-    response = dynamodb_service.remove_organization(
-        org_id=remove_request.organization_id,
-        org_admin_id=remove_request.organization_admin_id,
-    )
-
-    if not response:
-        logger.error(
-            "remove_request=%s, error=Failed to remove organization", remove_request
+    try:
+        response = dynamodb_service.remove_organization(
+            org_id=remove_request.organization_id,
+            org_admin_id=remove_request.organization_admin_id,
         )
-        return ErrorDTO(
-            code=HTTPStatus.BAD_REQUEST.value,
-            description="Failed to remove organization",
-        )
+    except PrismDBException as e:
+        logger.error("remove_request=%s, error=%s", remove_request, e)
+        return ErrorDTO(code=e.code, message=e.message)
 
     logger.info("remove_request=%s, response=%s", remove_request, response)
 
@@ -152,14 +145,11 @@ async def get_organization(
     logger.info("org_id=%s", org_id)
 
     dynamodb_service = DynamoDBService()
-    response = dynamodb_service.get_organization(org_id)
-
-    if not response:
-        logger.error("org_id=%s, error=Organization does not exist", org_id)
-        return ErrorDTO(
-            code=HTTPStatus.FORBIDDEN.value,
-            description="Organization does not exist",
-        )
+    try:
+        response = dynamodb_service.get_organization(org_id)
+    except PrismDBException as e:
+        logger.error("org_id=%s, error=%s", org_id, e)
+        return ErrorDTO(code=e.code, description=e.message)
 
     return GetOrganizationResponse(
         status=HTTPStatus.OK.value,
@@ -196,21 +186,14 @@ async def update_organization(org_id: str, update_request: UpdateOrganizationReq
     logger.info("org_id=%s, update_request=%s", org_id, update_request)
 
     dynamodb_service = DynamoDBService()
-    response = dynamodb_service.get_organization(org_id)
-    timestamp = str(time.time())
-
-    if not response:
-        logger.error(
-            "org_id=%s, update_request=%s error=Organization does not exist",
-            org_id,
-            update_request,
-        )
-        return ErrorDTO(
-            code=HTTPStatus.BAD_REQUEST.value,
-            description="Organization does not exist",
-        )
+    try:
+        response = dynamodb_service.get_organization(org_id)
+    except PrismDBException as e:
+        logger.error("org_id=%s, update_request=%s error=%s", org_id, update_request, e)
+        return ErrorDTO(code=e.code, description=e.message)
 
     org = to_organization_model(response)
+    timestamp = str(time.time())
     if org.admin_id != update_request.prev_organization_admin_id:
         logger.error(
             "org_id=%s, update_request=%s error=no permission to edit this organization",
@@ -270,38 +253,21 @@ async def invite_user_to_organization(
     dynamodb_service = DynamoDBService()
     org_user_id = str(uuid.uuid4())
 
-    invited_response = dynamodb_service.modify_invited_users_list(
-        org_id=org_id, org_user_id=org_user_id, is_remove=False
-    )
-
-    if not invited_response:
+    try:
+        dynamodb_service.modify_invited_users_list(
+            org_id=org_id, org_user_id=org_user_id, is_remove=False
+        )
+        dynamodb_service.modify_whitelist(
+            org_id=org_id,
+            org_name=invite_request.organization_name,
+            org_user_id=org_user_id,
+            is_remove=False,
+        )
+    except PrismDBException as e:
         logger.error(
-            "org_id=%s, invite_request=%s, error=Org does not exist or user already invited",
-            org_id,
-            invite_request,
+            "org_id=%s, invite_request=%s, error=%s", org_id, invite_request, e
         )
-        return ErrorDTO(
-            code=HTTPStatus.BAD_REQUEST.value,
-            description="Organization does not exist or user has been already invited",
-        )
-
-    whitelist_response = dynamodb_service.modify_whitelist(
-        org_id=org_id,
-        org_name=invite_request.organization_name,
-        org_user_id=org_user_id,
-        is_remove=False,
-    )
-
-    if not whitelist_response:
-        logger.error(
-            "org_id=%s, invite_request=%s, error=Failed to add user to whitelist",
-            org_id,
-            invite_request,
-        )
-        return ErrorDTO(
-            code=HTTPStatus.BAD_REQUEST.value,
-            description="Failed to add user to whitelist",
-        )
+        return ErrorDTO(code=e.code, message=e.message)
 
     ses_serivce = SESService()
     response = ses_serivce.send_signup_email(
@@ -352,39 +318,22 @@ async def cancel_pending_user_invite(
 
     dynamodb_service = DynamoDBService()
 
-    invited_response = dynamodb_service.modify_invited_users_list(
-        org_id=cancel_request.organization_user_id,
-        org_user_id=cancel_request.organization_user_id,
-        is_remove=True,
-    )
-
-    if not invited_response:
+    try:
+        dynamodb_service.modify_invited_users_list(
+            org_id=cancel_request.organization_user_id,
+            org_user_id=cancel_request.organization_user_id,
+            is_remove=True,
+        )
+        dynamodb_service.modify_whitelist(
+            org_id=org_id,
+            org_name=cancel_request.organization_name,
+            org_user_id=cancel_request.organization_user_id,
+            is_remove=True,
+        )
+    except PrismDBException as e:
         logger.error(
-            "org_id=%s, cancel_request=%s, error=Org does not exist or user not invited",
-            org_id,
-            cancel_request,
+            "org_id=%s, cancel_request=%s, error=%s", org_id, cancel_request, e
         )
-        return ErrorDTO(
-            code=HTTPStatus.BAD_REQUEST.value,
-            description="Organization does not exist or user not invited",
-        )
-
-    whitelist_response = dynamodb_service.modify_whitelist(
-        org_id=org_id,
-        org_name=cancel_request.organization_name,
-        org_user_id=cancel_request.organization_user_id,
-        is_remove=True,
-    )
-
-    if not whitelist_response:
-        logger.error(
-            "org_id=%s, cancel_request=%s, error=Failed to remove user from whitelist",
-            org_id,
-            cancel_request,
-        )
-        return ErrorDTO(
-            code=HTTPStatus.BAD_REQUEST.value,
-            description="Failed to remove user from whitelist",
-        )
+        return ErrorDTO(code=e.code, message=e.message)
 
     return CancelInviteUserOrganizationResponse(status=HTTPStatus.OK.value)

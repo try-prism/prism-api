@@ -13,6 +13,7 @@ from constants import (
     ZILLIZ_CLOUD_PORT,
     ZILLIZ_CLOUD_USER,
 )
+from exceptions import PrismDBException
 from llama_index import (
     ServiceContext,
     StorageContext,
@@ -26,6 +27,7 @@ from llama_index.schema import BaseNode
 from llama_index.storage.docstore.dynamodb_docstore import DynamoDBDocumentStore
 from llama_index.storage.index_store.dynamodb_index_store import DynamoDBIndexStore
 from llama_index.vector_stores import MilvusVectorStore
+from models import to_organization_model
 from storage import DynamoDBService
 
 logger = logging.getLogger(__name__)
@@ -94,13 +96,15 @@ class DataIndexingService:
 
         # Store vector index id to organization
         dynamodb_service = DynamoDBService()
-        response = dynamodb_service.get_organization(self.org_id)
 
-        if not response:
+        try:
+            dynamodb_service.get_organization(self.org_id)
+        except PrismDBException as e:
             logger.error(
-                "org_id=%s, account_token=%s, error=Organization does not exist",
+                "org_id=%s, account_token=%s, error=%s",
                 self.org_id,
                 self.account_token,
+                e,
             )
             return False
 
@@ -135,14 +139,20 @@ class DataIndexingService:
         )
 
         dynamodb_service = DynamoDBService()
-        response = dynamodb_service.get_organization(self.org_id)
 
-        if not response:
-            logger.error("org_id=%s, error=Organization does not exist", self.org_id)
+        try:
+            response = dynamodb_service.get_organization(self.org_id)
+        except PrismDBException as e:
+            logger.error(
+                "org_id=%s, account_token=%s, error=%s",
+                self.org_id,
+                self.account_token,
+                e,
+            )
             return None
 
-        org_item = response["Item"]
-        vector_index_id = org_item.get("index_id", {"S": ""})["S"]
+        org_item = to_organization_model(response)
+        vector_index_id = org_item.index_id
 
         vector_index = load_index_from_storage(
             storage_context=self.storage_context, index_id=vector_index_id

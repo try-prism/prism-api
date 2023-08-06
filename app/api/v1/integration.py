@@ -4,7 +4,9 @@ from http import HTTPStatus
 
 from botocore.exceptions import ClientError
 from constants import DYNAMODB_ORGANIZATION_TABLE
+from exceptions import PrismDBException
 from fastapi import APIRouter, Header
+from models import to_organization_model
 from models.RequestModels import GenerateLinkTokenRequest, IntegrationRequest
 from models.ResponseModels import (
     ErrorDTO,
@@ -116,19 +118,19 @@ async def integration(
 
     # Add account_token to organization's link_id_map
     dynamodb_service = DynamoDBService()
-    response = dynamodb_service.get_organization(integration_request.organization_id)
-
-    if not response:
+    try:
+        response = dynamodb_service.get_organization(
+            integration_request.organization_id
+        )
+    except PrismDBException as e:
         logger.error(
-            "integration_request=%s, error=No such organization exists",
+            "integration_request=%s, error=%s",
             integration_request,
+            e,
         )
-        return ErrorDTO(
-            code=HTTPStatus.BAD_REQUEST.value,
-            description="No such organization exists",
-        )
+        return ErrorDTO(code=e.code, description=e.message)
 
-    org_item = response["Item"]
+    org_item = to_organization_model(response)
     timestamp = str(time.time())
 
     try:
@@ -180,16 +182,13 @@ async def get_integration_detail(
 
     # Retrieve organization's integration details
     dynamodb_service = DynamoDBService()
-    response = dynamodb_service.get_organization(org_id)
+    try:
+        response = dynamodb_service.get_organization(org_id)
+    except PrismDBException as e:
+        logger.error("org_id=%s, error=%s", org_id, e)
+        return ErrorDTO(code=e.code, description=e.message)
 
-    if not response:
-        logger.error("org_id=%s, error=No such organization exists", org_id)
-        return ErrorDTO(
-            code=HTTPStatus.BAD_REQUEST.value,
-            description="No such organization exists",
-        )
-
-    org_item = response["Item"]
+    org_item = to_organization_model(response)
 
     try:
         link_id_map = org_item.get("link_id_map", {"M": {}})["M"]
@@ -232,20 +231,18 @@ async def remove_integration_detail(
 
     # Remove organization's integration detail
     dynamodb_service = DynamoDBService()
-    response = dynamodb_service.get_organization(org_id)
-
-    if not response:
+    try:
+        response = dynamodb_service.get_organization(org_id)
+    except PrismDBException as e:
         logger.error(
-            "org_id=%s, integration_account_token=%s, error=No such org exists",
+            "org_id=%s, integration_account_token=%s, error=%s",
             org_id,
-            integration,
+            integration_account_token,
+            e,
         )
-        return ErrorDTO(
-            code=HTTPStatus.BAD_REQUEST.value,
-            description="No such organization exists",
-        )
+        return ErrorDTO(code=e.code, description=e.message)
 
-    org_item = response["Item"]
+    org_item = to_organization_model(response)
     timestamp = str(time.time())
 
     try:
