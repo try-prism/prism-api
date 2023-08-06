@@ -172,24 +172,24 @@ class DynamoDBService:
         org_item = to_organization_model(response)
         invited_user_list = org_item.invited_user_list
 
+        if is_remove:
+            if org_user_id not in invited_user_list:
+                raise PrismDBException(
+                    code=PrismDBExceptionCode.USER_NOT_INVITED,
+                    message="User is not invited",
+                )
+
+            invited_user_list.remove(org_user_id)
+        else:
+            if org_user_id in invited_user_list:
+                raise PrismDBException(
+                    code=PrismDBExceptionCode.USER_ALREADY_INVITED,
+                    message="User is already invited",
+                )
+
+            invited_user_list.append(org_user_id)
+
         try:
-            if is_remove:
-                if org_user_id not in invited_user_list:
-                    raise PrismDBException(
-                        code=PrismDBExceptionCode.USER_NOT_INVITED,
-                        message="User is not invited",
-                    )
-
-                invited_user_list.remove(org_user_id)
-            else:
-                if org_user_id in invited_user_list:
-                    raise PrismDBException(
-                        code=PrismDBExceptionCode.USER_ALREADY_INVITED,
-                        message="User is already invited",
-                    )
-
-                invited_user_list.append(org_user_id)
-
             self.update_item(
                 table_name=DYNAMODB_ORGANIZATION_TABLE,
                 key={"id": {"S": org_id}},
