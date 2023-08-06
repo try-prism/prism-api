@@ -3,9 +3,9 @@ from enum import Enum
 
 
 class PrismException(Exception):
-    @abstractmethod
     def __init__(self, code: Enum, message: str):
-        pass
+        self.code = code
+        self.message = message
 
     @abstractmethod
     def __str__(self):

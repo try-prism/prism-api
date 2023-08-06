@@ -2,6 +2,7 @@ import logging
 
 import boto3
 from constants import DEFAULT_SIGNUP_URL, SES_SENDER_EMAIL
+from exceptions import PrismEmailException, PrismEmailExceptionCode
 
 logger = logging.getLogger(__name__)
 
@@ -14,7 +15,7 @@ class SESService:
 
     def send_signup_email(
         self, org_name: str, org_user_email: str, org_user_id: str
-    ) -> bool:
+    ) -> None:
         logger.info(
             "Sending signup email. org_name=%s, user_email=%s, org_user_id=%s",
             org_name,
@@ -57,13 +58,6 @@ class SESService:
                 },
                 ReplyToAddresses=[],
             )
-            logger.info(
-                "org_name=%s, org_user_email=%s, org_user_id=%s, response=%s",
-                org_name,
-                org_user_email,
-                org_user_id,
-                response,
-            )
         except Exception as e:
             logger.error(
                 "org_name=%s, org_user_email=%s, org_user_id=%s, error=%s",
@@ -72,6 +66,15 @@ class SESService:
                 org_user_id,
                 str(e),
             )
-            return False
+            raise PrismEmailException(
+                code=PrismEmailExceptionCode.EMAIL_NOT_SENT,
+                message="Failed to send email",
+            )
 
-        return True
+        logger.info(
+            "org_name=%s, org_user_email=%s, org_user_id=%s, response=%s",
+            org_name,
+            org_user_email,
+            org_user_id,
+            response,
+        )

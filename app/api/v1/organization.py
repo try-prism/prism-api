@@ -5,7 +5,7 @@ from http import HTTPStatus
 
 from botocore.exceptions import ClientError
 from constants import DYNAMODB_ORGANIZATION_TABLE
-from exceptions import PrismDBException
+from exceptions import PrismDBException, PrismException
 from fastapi import APIRouter
 from models import to_organization_model
 from models.RequestModels import (
@@ -251,6 +251,7 @@ async def invite_user_to_organization(
     logger.info("org_id=%s, invite_request=%s", org_id, invite_request)
 
     dynamodb_service = DynamoDBService()
+    ses_serivce = SESService()
     org_user_id = str(uuid.uuid4())
 
     try:
@@ -263,29 +264,16 @@ async def invite_user_to_organization(
             org_user_id=org_user_id,
             is_remove=False,
         )
-    except PrismDBException as e:
+        ses_serivce.send_signup_email(
+            org_name=invite_request.organization_name,
+            org_user_email=invite_request.organization_user_email,
+            org_user_id=org_user_id,
+        )
+    except PrismException as e:
         logger.error(
             "org_id=%s, invite_request=%s, error=%s", org_id, invite_request, e
         )
         return ErrorDTO(code=e.code, message=e.message)
-
-    ses_serivce = SESService()
-    response = ses_serivce.send_signup_email(
-        org_name=invite_request.organization_name,
-        org_user_email=invite_request.organization_user_email,
-        org_user_id=org_user_id,
-    )
-
-    if not response:
-        logger.error(
-            "org_id=%s, invite_request=%s, error=Failed to send invitation email",
-            org_id,
-            invite_request,
-        )
-        return ErrorDTO(
-            code=HTTPStatus.INTERNAL_SERVER_ERROR.value,
-            description="Failed to send invitation email",
-        )
 
     return InviteUserOrganizationResponse(status=HTTPStatus.OK.value)
 
