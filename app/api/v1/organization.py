@@ -7,7 +7,7 @@ from botocore.exceptions import ClientError
 from constants import DYNAMODB_ORGANIZATION_TABLE
 from exceptions import PrismDBException, PrismException
 from fastapi import APIRouter
-from models import to_organization_model
+from models import get_organization_key, to_organization_model
 from models.RequestModels import (
     CancelInviteUserOrganizationRequest,
     InviteUserOrganizationRequest,
@@ -145,6 +145,7 @@ async def get_organization(
     logger.info("org_id=%s", org_id)
 
     dynamodb_service = DynamoDBService()
+
     try:
         response = dynamodb_service.get_organization(org_id)
     except PrismDBException as e:
@@ -186,6 +187,7 @@ async def update_organization(org_id: str, update_request: UpdateOrganizationReq
     logger.info("org_id=%s, update_request=%s", org_id, update_request)
 
     dynamodb_service = DynamoDBService()
+
     try:
         response = dynamodb_service.get_organization(org_id)
     except PrismDBException as e:
@@ -194,6 +196,7 @@ async def update_organization(org_id: str, update_request: UpdateOrganizationReq
 
     org_item = to_organization_model(response)
     timestamp = str(time.time())
+
     if org_item.admin_id != update_request.prev_organization_admin_id:
         logger.error(
             "org_id=%s, update_request=%s error=no permission to edit this organization",
@@ -208,7 +211,7 @@ async def update_organization(org_id: str, update_request: UpdateOrganizationReq
     try:
         dynamodb_service.get_client().update_item(
             TableName=DYNAMODB_ORGANIZATION_TABLE,
-            Key={"id": {"S": org_id}},
+            Key=get_organization_key(org_id),
             UpdateExpression="SET admin_id = :id, updated_at = :ua",
             ExpressionAttributeValues={
                 ":id": {"M": org_id},

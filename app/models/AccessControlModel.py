@@ -9,11 +9,9 @@ class AccessControlModel(BaseModel):
 
 
 def to_access_control_model(response: dict) -> AccessControlModel:
-    item: dict = response.get("access_control", {"M", {}})["M"]
-
     return AccessControlModel(
-        id=item.get("id", {"S": ""})["S"],
-        permissions=item.get("permissions", {"L": []})["L"],
-        created_at=item.get("created_at", {"S": ""})["S"],
-        updated_at=item.get("updated_at", {"S": ""})["S"],
+        id=response.get("id", {"S": ""})["S"],
+        permissions=response.get("permissions", {"L": []})["L"],
+        created_at=response.get("created_at", {"S": ""})["S"],
+        updated_at=response.get("updated_at", {"S": ""})["S"],
     )

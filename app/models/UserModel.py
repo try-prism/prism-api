@@ -21,7 +21,13 @@ def to_user_model(response: dict) -> UserModel:
         email=item.get("email", {"S": ""})["S"],
         name=item.get("name", {"S": ""})["S"],
         organization_id=item.get("organization_id", {"S": ""})["S"],
-        access_control=to_access_control_model(item),
+        access_control=to_access_control_model(
+            item.get("access_control", {"M", {}})["M"]
+        ),
         created_at=item.get("created_at", {"S": ""})["S"],
         updated_at=item.get("updated_at", {"S": ""})["S"],
     )
+
+
+def get_user_key(user_id: str) -> dict:
+    return {"id": {"S": user_id}}
