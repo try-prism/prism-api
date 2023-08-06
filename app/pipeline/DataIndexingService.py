@@ -23,7 +23,9 @@ from llama_index import (
 )
 from llama_index.callbacks import CallbackManager, TokenCountingHandler
 from llama_index.chat_engine.types import BaseChatEngine, ChatMode
-from llama_index.indices.postprocessor import FixedRecencyPostprocessor
+from llama_index.indices.postprocessor import (  # FixedRecencyPostprocessor,
+    SentenceEmbeddingOptimizer,
+)
 from llama_index.indices.postprocessor.cohere_rerank import CohereRerank
 from llama_index.llms import OpenAI
 from llama_index.schema import BaseNode
@@ -56,7 +58,6 @@ class DataIndexingService:
                 use_secure=True,
             ),
         )
-        self.top_k = 10
 
     def store_docs_to_docstore(self, nodes: Sequence[BaseNode]) -> bool:
         logger.info(
@@ -169,17 +170,33 @@ class DataIndexingService:
             callback_manager=CallbackManager([token_counter]),
         )
 
-        # prioritize recent documents in the results
-        recency_postprocessor = FixedRecencyPostprocessor(
-            service_context=service_context, top_k=self.top_k
+        """
+        Commented out for now because we should determine how to apply this
+        It will depend on the use case
+
+        prioritize most recent information in the results
+        fixed_recency_postprocessor = FixedRecencyPostprocessor(
+            tok_k=5, date_key="date"  # the key in the metadata to find the date
         )
-        cohere_rerank = CohereRerank(api_key=COHERE_API_KEY, top_n=self.top_k)
+        """
+        # re-order nodes, and returns the top N nodes
+        cohere_rerank_postprocessor = CohereRerank(
+            api_key=COHERE_API_KEY, top_n=self.top_k
+        )
+        # remove sentences that are not relevant to the query
+        sentence_embedding_postprocessor = SentenceEmbeddingOptimizer(
+            percentile_cutoff=0.7
+        )
 
         chat_engine = vector_index.as_chat_engine(
             similarity_top_k=self.top_k,
             service_context=service_context,
             chat_mode=ChatMode.REACT,
-            node_postprocessors=[recency_postprocessor, cohere_rerank],
+            node_postprocessors=[
+                cohere_rerank_postprocessor,
+                # fixed_recency_postprocessor,
+                sentence_embedding_postprocessor,
+            ],
         )
 
         return chat_engine
