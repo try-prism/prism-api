@@ -48,6 +48,7 @@ export RAY_ENABLE_WINDOWS_OR_OSX_CLUSTER=1
 
 ```bash
 cd app
+# ray start --head --port=6379
 python -m uvicorn main:app --workers 4
 ```
 
