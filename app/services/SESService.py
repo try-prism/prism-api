@@ -17,7 +17,7 @@ class SESService:
         self, org_name: str, org_user_email: str, org_user_id: str
     ) -> None:
         logger.info(
-            "Sending signup email. org_name=%s, user_email=%s, org_user_id=%s",
+            "org_name=%s, user_email=%s, org_user_id=%s",
             org_name,
             org_user_email,
             org_user_id,
@@ -67,8 +67,8 @@ class SESService:
                 str(e),
             )
             raise PrismEmailException(
-                code=PrismEmailExceptionCode.EMAIL_NOT_SENT,
-                message="Failed to send email",
+                code=PrismEmailExceptionCode.SIGNUP_EMAIL_NOT_SENT,
+                message="Failed to send signup email",
             )
 
         logger.info(
@@ -76,5 +76,63 @@ class SESService:
             org_name,
             org_user_email,
             org_user_id,
+            response,
+        )
+
+    def send_temp_password_email(self, org_user_email: str, temp_password: str) -> None:
+        logger.info(
+            "org_user_email=%s, temp_password=%s", org_user_email, temp_password
+        )
+
+        try:
+            response = self.client.send_email(
+                Source=SES_SENDER_EMAIL,
+                Destination={
+                    "ToAddresses": [
+                        org_user_email,
+                    ],
+                    "CcAddresses": [],
+                    "BccAddresses": [],
+                },
+                Message={
+                    "Subject": {
+                        "Charset": "UTF-8",
+                        "Data": "[Prism AI] Your temporary password",
+                    },
+                    "Body": {
+                        "Text": {
+                            "Charset": "UTF-8",
+                            "Data": (
+                                f"Your temporary password is {temp_password}"
+                                f"Please change your password after logging in."
+                            ),
+                        },
+                        "Html": {
+                            "Charset": "UTF-8",
+                            "Data": (
+                                f"Your temporary password is {temp_password}"
+                                f"Please change your password after logging in."
+                            ),
+                        },
+                    },
+                },
+                ReplyToAddresses=[],
+            )
+        except Exception as e:
+            logger.info(
+                "org_user_email=%s, temp_password=%s, error=%s",
+                org_user_email,
+                temp_password,
+                e,
+            )
+            raise PrismEmailException(
+                code=PrismEmailExceptionCode.TEMP_PW_EMAIL_NOT_SENT,
+                message="Failed to send temporary password email",
+            )
+
+        logger.info(
+            "org_user_email=%s, temp_password=%s, response=%s",
+            org_user_email,
+            temp_password,
             response,
         )

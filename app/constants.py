@@ -35,6 +35,10 @@ SES_SENDER_EMAIL = "noreply@tryprism.ai"
 DEFAULT_SIGNUP_URL = "http://tryprism.ai/signup?user="
 
 
+# Cognito Configurations
+COGNITO_USER_POOL_ID = os.environ["COGNITO_USER_POOL_ID"]
+
+
 # Zilliz Cloud
 ZILLIZ_CLOUD_HOST = os.environ["ZILLIZ_CLOUD_HOST"]
 ZILLIZ_CLOUD_PORT = os.environ["ZILLIZ_CLOUD_PORT"]

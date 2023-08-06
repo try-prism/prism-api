@@ -1,7 +1,7 @@
 import logging
 from http import HTTPStatus
 
-from exceptions import PrismDBException
+from exceptions import PrismDBException, PrismException
 from fastapi import APIRouter, Header
 from models import to_user_model, to_whitelist_model
 from models.RequestModels import (
@@ -16,6 +16,7 @@ from models.ResponseModels import (
     GetUserResponse,
     RegisterUserResponse,
 )
+from services import CognitoService
 from storage import DynamoDBService
 
 from .organization import cancel_pending_user_invite
@@ -60,6 +61,8 @@ async def register_user(
     logger.info("register_request=%s", register_request)
 
     dynamodb_service = DynamoDBService()
+    cognito_service = CognitoService()
+
     try:
         whitelist_response = dynamodb_service.get_whitelist_user_data(
             user_id=register_request.id
@@ -68,13 +71,21 @@ async def register_user(
         logger.info(
             "register_request=%s, whitelist_item=%s", register_request, whitelist_item
         )
+        # Add user to the cognito user pool
+        cognito_service.create_user(
+            user_id=register_request.email,
+            user_email=register_request.email,
+            user_name=register_request.name,
+            organization_id=whitelist_item.org_id,
+        )
+        # Add user to user table
         dynamodb_service.register_user(
-            id=register_request.id,
+            id=register_request.email,
             email=register_request.email,
             name=register_request.name,
             organization_id=whitelist_item.org_id,
         )
-    except PrismDBException as e:
+    except PrismException as e:
         logger.error(
             "register_request=%s, error=%s",
             register_request,
@@ -148,13 +159,14 @@ async def delete_user(id: str, org_admin_id: str = Header()):
     logger.info("id=%s", id)
 
     dynamodb_service = DynamoDBService()
+    cognito_service = CognitoService()
+
     try:
+        cognito_service.remove_user(user_id=id)
         dynamodb_service.remove_user(user_id=id, org_admin_id=org_admin_id)
-    except PrismDBException as e:
+    except PrismException as e:
         logger.error("id=%s, org_admin_id=%s, error=%s", id, org_admin_id, e)
         return ErrorDTO(code=e.code, message=e.message)
-
-    # TODO: remove the user from the cognito
 
     return DeleteUserResponse(status=HTTPStatus.OK.value)
 
