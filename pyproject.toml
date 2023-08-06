@@ -17,6 +17,7 @@ mergepythonclient = "^0.2.1"
 unstructured = {extras = ["csv", "doc", "docx", "html", "pdf", "ppt", "pptx", "rtf", "txt", "xlsx"], version = "^0.9.0"}
 ray = {extras = ["default"], version = "^2.6.2"}
 langchain = {extras = ["llms"], version = "^0.0.251"}
+websockets = "^11.0.3"
 
 
 [tool.poetry.group.dev.dependencies]
