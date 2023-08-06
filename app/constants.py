@@ -12,6 +12,7 @@ OPENAI_ORG_KEY = os.environ["OPENAI_ORG_KEY"]
 AWS_ACCESS_KEY_ID = os.environ["AWS_ACCESS_KEY_ID"]
 AWS_SECRET_ACCESS_KEY = os.environ["AWS_SECRET_ACCESS_KEY"]
 MERGE_API_KEY = os.environ["MERGE_API_KEY"]
+COHERE_API_KEY = os.environ["COHERE_API_KEY"]
 
 
 # Model
