@@ -48,7 +48,7 @@ ray start
 
 ```bash
 cd app
-python -m uvicorn main:app --workers 4 --reload
+python -m uvicorn main:app --workers 4
 ```
 
 ## Before committing
