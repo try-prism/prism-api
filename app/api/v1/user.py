@@ -1,7 +1,7 @@
 import logging
 from http import HTTPStatus
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Header
 from models import to_whitelist_model
 from models.RequestModels import (
     CancelInviteUserOrganizationRequest,
@@ -9,6 +9,7 @@ from models.RequestModels import (
 )
 from models.ResponseModels import (
     CancelInviteUserOrganizationResponse,
+    DeleteUserResponse,
     ErrorDTO,
     GetInvitationResponse,
     GetUserResponse,
@@ -141,6 +142,49 @@ async def get_user(id: str):
         )
 
     return GetUserResponse(status=HTTPStatus.OK.value, user=to_user_model(response))
+
+
+@router.delete(
+    "/user/{id}",
+    summary="Delete a user's account",
+    tags=["User"],
+    response_model=DeleteUserResponse,
+    responses={
+        200: {"model": DeleteUserResponse, "description": "OK"},
+        400: {"model": ErrorDTO, "description": "Error: Bad request"},
+    },
+)
+async def delete_user(id: str, org_admin_id: str = Header()):
+    if not id:
+        return ErrorDTO(
+            code=HTTPStatus.BAD_REQUEST.value,
+            description="User id is required",
+        )
+
+    logger.info("id=%s", id)
+
+    dynamodb_service = DynamoDBService()
+    response = dynamodb_service.get_user(user_id=id)
+
+    if not response:
+        return ErrorDTO(
+            code=HTTPStatus.BAD_REQUEST.value,
+            description="No such user",
+        )
+
+    remove_response = dynamodb_service.remove_user(
+        user_id=id, org_admin_id=org_admin_id
+    )
+
+    if not remove_response:
+        return ErrorDTO(
+            code=HTTPStatus.BAD_REQUEST.value,
+            description="Failed to remove user",
+        )
+
+    # TODO: remove the user from the cognito
+
+    return DeleteUserResponse(status=HTTPStatus.OK.value)
 
 
 @router.get(

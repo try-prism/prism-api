@@ -62,6 +62,10 @@ class GetUserResponse(BaseModel):
     user: UserModel
 
 
+class DeleteUserResponse(BaseModel):
+    status: int
+
+
 class GetInvitationResponse(BaseModel):
     status: int
     invitation: WhitelistModel

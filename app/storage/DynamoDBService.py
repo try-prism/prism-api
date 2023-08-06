@@ -8,7 +8,7 @@ from constants import (
     DYNAMODB_USER_TABLE,
     DYNAMODB_WHITELIST_TABLE,
 )
-from models import to_organization_model
+from models import to_organization_model, to_user_model
 
 logger = logging.getLogger(__name__)
 
@@ -200,10 +200,71 @@ class DynamoDBService:
 
         response = self.put_item(DYNAMODB_USER_TABLE, new_user)
 
-        return response
+        if not response:
+            return False
+
+        response = self.get_organization(organization_id)
+
+        if not response:
+            return False
+
+        org_item = response["Item"]
+        user_list: list = org_item.get("user_list", {"L": {}})["L"]
+        user_list.append(id)
+
+        update_response = self.update_item(
+            table_name=DYNAMODB_ORGANIZATION_TABLE,
+            key={"id": {"S": organization_id}},
+            field_name="user_list",
+            field_value={"L": user_list},
+        )
+
+        return update_response
 
     def get_user(self, user_id: str) -> dict | None:
         key = {"id": {"S": user_id}}
         response = self.get_item(DYNAMODB_USER_TABLE, key)
 
         return response
+
+    def remove_user(self, user_id: str, org_admin_id: str) -> dict | None:
+        key = {"id": {"S": user_id}}
+        response = self.get_item(DYNAMODB_USER_TABLE, key)
+
+        if not response:
+            return None
+
+        user_model = to_user_model(response)
+        org_response = self.get_organization(org_id=user_model.organization_id)
+
+        if not org_response:
+            return None
+
+        org_model = to_organization_model(org_response)
+
+        if org_model.admin_id != org_admin_id:
+            return None
+
+        user_delete_response = self.delete_item(DYNAMODB_USER_TABLE, key)
+
+        if not user_delete_response:
+            return None
+
+        response = self.get_organization(user_model.organization_id)
+
+        if not response:
+            return False
+
+        org_item = response["Item"]
+        user_list: list = org_item.get("user_list", {"L": {}})["L"]
+        if id in user_list:
+            user_list.remove(id)
+
+        update_response = self.update_item(
+            table_name=DYNAMODB_ORGANIZATION_TABLE,
+            key={"id": {"S": user_model.organization_id}},
+            field_name="user_list",
+            field_value={"L": user_list},
+        )
+
+        return update_response
