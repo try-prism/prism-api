@@ -3,7 +3,7 @@ from collections.abc import Sequence
 from typing import IO
 
 import ray
-from constants import RAY_RUNTIME_ENV
+from constants import PRISM_ENV, RAY_ADDRESS, RAY_RUNTIME_ENV
 from exceptions import PrismMergeException
 from llama_index import Document
 from llama_index.node_parser import SimpleNodeParser
@@ -18,8 +18,6 @@ from .EmbedNodes import EmbedNodes
 
 logger = logging.getLogger(__name__)
 
-ray.init(runtime_env=RAY_RUNTIME_ENV)
-
 
 class DataPipelineService:
     def __init__(self, account_token: str):
@@ -27,6 +25,28 @@ class DataPipelineService:
         self.loader = CustomUnstructuredReader()
         self.parser = SimpleNodeParser()
         self.merge_service = MergeService(account_token=account_token)
+
+        if not ray.is_initialized():
+            logger.info("Connecting to the ray cluster. ENV=%s", PRISM_ENV)
+
+            if PRISM_ENV == "PROD":
+                try:
+                    ray.init(
+                        RAY_ADDRESS,
+                        ignore_reinit_error=True,
+                        runtime_env=RAY_RUNTIME_ENV,
+                    )
+                except Exception as e:
+                    logger.error("Disconnected from the ray cluster, error=%s", str(e))
+                    ray.shutdown()
+                    ray.init(
+                        RAY_ADDRESS,
+                        ignore_reinit_error=True,
+                        runtime_env=RAY_RUNTIME_ENV,
+                    )
+                    logger.error("Connecting to the ray cluster")
+            else:
+                ray.init(runtime_env=RAY_RUNTIME_ENV)
 
     def get_embedded_nodes(self, all_files: list[File]) -> Sequence[BaseNode]:
         loaded_docs = self.load_data(all_files)

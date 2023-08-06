@@ -38,10 +38,10 @@ Ask teammates for the environment configuration
 touch .env
 ```
 
-6. Start Ray instance
+6. Setup variable for Ray instance
 
 ```bash
-ray start
+export RAY_ENABLE_WINDOWS_OR_OSX_CLUSTER=1
 ```
 
 7. Run the api using the following command

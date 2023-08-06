@@ -42,4 +42,8 @@ ENV ZILLIZ_CLOUD_PORT=tmp-port
 ENV ZILLIZ_CLOUD_USER=tmp-user
 ENV ZILLIZ_CLOUD_PASSWORD=tmp-password
 
+ENV RAY_ADDRESS=ray://<app_name>-ray-head:10001
+
+ENV PRISM_ENV=PROD
+
 COPY ./app /app
