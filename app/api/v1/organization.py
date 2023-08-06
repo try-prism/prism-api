@@ -37,8 +37,8 @@ logger = logging.getLogger(__name__)
 | `/organization`                      | Delete an organization                | DELETE |
 | `/organization/{org_id}`             | Retrieve a organization's details     | GET    |
 | `/organization/{org_id}`             | Update a organization's admin id      | PATCH  |
-| `/organization/{org_id}/user`        | Invite a user to a organization       | POST   |
-| `/organization/{org_id}/user`        | Candel pending user invite            | DELETE |
+| `/organization/{org_id}/invite`      | Invite a user to a organization       | POST   |
+| `/organization/{org_id}/invite`      | Candel pending user invite            | DELETE |
 """
 
 
@@ -226,7 +226,7 @@ async def update_organization(org_id: str, update_request: UpdateOrganizationReq
 
 
 @router.post(
-    "/organization/{org_id}/user",
+    "/organization/{org_id}/invite",
     summary="Invite a user to a organization",
     tags=["Organization"],
     response_model=InviteUserOrganizationResponse,
@@ -279,7 +279,7 @@ async def invite_user_to_organization(
 
 
 @router.delete(
-    "/organization/{org_id}/user",
+    "/organization/{org_id}/invite",
     summary="Candel pending user invite",
     tags=["Organization"],
     response_model=CancelInviteUserOrganizationResponse,
