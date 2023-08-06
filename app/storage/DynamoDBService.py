@@ -9,7 +9,12 @@ from constants import (
     DYNAMODB_WHITELIST_TABLE,
 )
 from exceptions import PrismDBException, PrismDBExceptionCode
-from models import to_organization_model, to_user_model
+from models import (
+    get_organization_key,
+    get_user_key,
+    to_organization_model,
+    to_user_model,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -115,7 +120,7 @@ class DynamoDBService:
         self.put_item(DYNAMODB_ORGANIZATION_TABLE, new_organization)
 
     def get_organization(self, org_id: str) -> dict:
-        key = {"id": {"S": org_id}}
+        key = get_organization_key(org_id)
 
         try:
             return self.get_item(DYNAMODB_ORGANIZATION_TABLE, key)
@@ -124,7 +129,7 @@ class DynamoDBService:
             raise e
 
     def remove_organization(self, org_id: str, org_admin_id: str) -> dict:
-        key = {"id": {"S": org_id}}
+        key = get_organization_key(org_id)
 
         try:
             response = self.get_item(DYNAMODB_ORGANIZATION_TABLE, key)
@@ -192,7 +197,7 @@ class DynamoDBService:
         try:
             self.update_item(
                 table_name=DYNAMODB_ORGANIZATION_TABLE,
-                key={"id": {"S": org_id}},
+                key=get_organization_key(org_id),
                 field_name="invited_user_list",
                 field_value={"L": invited_user_list},
             )
@@ -202,7 +207,7 @@ class DynamoDBService:
             raise e
 
     def get_whitelist_user_data(self, user_id: str) -> dict:
-        key = {"id": {"S": user_id}}
+        key = get_user_key(user_id)
 
         try:
             response = self.get_item(DYNAMODB_WHITELIST_TABLE, key)
@@ -236,7 +241,7 @@ class DynamoDBService:
         try:
             self.update_item(
                 table_name=DYNAMODB_ORGANIZATION_TABLE,
-                key={"id": {"S": organization_id}},
+                key=get_organization_key(organization_id),
                 field_name="user_list",
                 field_value={"L": user_list},
             )
@@ -245,10 +250,8 @@ class DynamoDBService:
             raise e
 
     def get_user(self, user_id: str) -> dict:
-        key = {"id": {"S": user_id}}
-
         try:
-            response = self.get_item(DYNAMODB_USER_TABLE, key)
+            response = self.get_item(DYNAMODB_USER_TABLE, get_user_key(user_id))
         except PrismDBException as e:
             e.message = "Could not find user"
             raise e
@@ -267,7 +270,7 @@ class DynamoDBService:
                 message="You don't have permission to remove user",
             )
 
-        self.delete_item(DYNAMODB_USER_TABLE, {"id": {"S": user_id}})
+        self.delete_item(DYNAMODB_USER_TABLE, get_user_key(user_id))
         response = self.get_organization(user_model.organization_id)
         org_item = to_organization_model(response)
         user_list = org_item.user_list
@@ -276,7 +279,7 @@ class DynamoDBService:
             user_list.remove(user_id)
             self.update_item(
                 table_name=DYNAMODB_ORGANIZATION_TABLE,
-                key={"id": {"S": user_model.organization_id}},
+                key=get_organization_key(user_model.organization_id),
                 field_name="user_list",
                 field_value={"L": user_list},
             )

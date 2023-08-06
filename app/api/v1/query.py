@@ -1,9 +1,9 @@
 import logging
 
 from connection import ConnectionManager
-from exceptions import PrismDBException
+from exceptions import PrismDBException, PrismDBExceptionCode
 from fastapi import APIRouter, Header, WebSocket, WebSocketDisconnect
-from models import OrganizationModel
+from models import to_organization_model
 from pipeline import DataIndexingService
 from storage import DynamoDBService
 
@@ -24,23 +24,24 @@ async def query(websocket: WebSocket, org_id: str = Header(), user_id: str = Hea
     dynamodb_service = DynamoDBService()
 
     try:
+        # Check whether the user belongs to the organization
         response = dynamodb_service.get_organization(org_id)
-        org_model = OrganizationModel(response)
+        org_model = to_organization_model(response)
 
         if user_id not in org_model.user_list:
-            return
-    except PrismDBException as e:
-        logger.error("org_id=%s, user_id: %s, error=%s", org_id, user_id, e)
-        return
+            raise PrismDBException(
+                code=PrismDBExceptionCode.USER_DOES_NOT_EXIST,
+                message="User doesn't belong to this organization",
+            )
 
-    # Create chat index that queries the given organization
-    data_index_service = DataIndexingService(org_id=org_id)
+        # Create chat index that queries the given organization
+        data_index_service = DataIndexingService(org_id=org_id)
 
-    try:
         vector_index = data_index_service.load_vector_index()
         chat_engine = data_index_service.generate_chat_engine(vector_index)
+
     except PrismDBException as e:
-        logger.error("org_id: %s, user_id: %s, error=%s", org_id, user_id, e)
+        logger.error("org_id=%s, user_id: %s, error=%s", org_id, user_id, e)
         return
 
     manager = ConnectionManager()
@@ -50,7 +51,7 @@ async def query(websocket: WebSocket, org_id: str = Header(), user_id: str = Hea
         while True:
             user_text = await websocket.receive_text()
             response = await chat_engine.achat(message=user_text)
-            await manager.send_personal_message(response.response, websocket)
+            await manager.send_message(response.response, websocket)
             logger.debug("source_nodes=%s", response.source_nodes)
     except WebSocketDisconnect:
         manager.disconnect(websocket)

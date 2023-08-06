@@ -32,7 +32,7 @@ from llama_index.schema import BaseNode
 from llama_index.storage.docstore.dynamodb_docstore import DynamoDBDocumentStore
 from llama_index.storage.index_store.dynamodb_index_store import DynamoDBIndexStore
 from llama_index.vector_stores import MilvusVectorStore
-from models import to_organization_model
+from models import get_organization_key, to_organization_model
 from storage import DynamoDBService
 
 logger = logging.getLogger(__name__)
@@ -118,7 +118,7 @@ class DataIndexingService:
         try:
             dynamodb_service.get_client().update_item(
                 TableName=DYNAMODB_ORGANIZATION_TABLE,
-                Key={"id": {"S": self.org_id}},
+                Key=get_organization_key(self.org_id),
                 UpdateExpression="SET index_id = :id, updated_at = :ua",
                 ExpressionAttributeValues={
                     ":id": {"S": ray_docs_index.index_id},

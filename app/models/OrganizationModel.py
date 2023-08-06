@@ -29,3 +29,7 @@ def to_organization_model(response: dict) -> OrganizationModel:
         created_at=item.get("created_at", {"S": ""})["S"],
         updated_at=item.get("updated_at", {"S": ""})["S"],
     )
+
+
+def get_organization_key(org_id: str) -> dict:
+    return {"id": {"S": org_id}}

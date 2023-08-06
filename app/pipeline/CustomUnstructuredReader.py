@@ -2,7 +2,7 @@
 Custom Unstructured file reader for Prism AI
 https://github.com/emptycrown/llama-hub
 
-Original: llama_hub/file/unstructured/base.py
+Original Implementation: llama_hub/file/unstructured/base.py
 
 A parser for unstructured text files using Unstructured.io.
 Supports .html, .rtf, .txt, .csv, .doc, .docx, .pdf, .ppt, .pptx, and .xlsx documents.

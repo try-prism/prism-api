@@ -6,7 +6,7 @@ from botocore.exceptions import ClientError
 from constants import DYNAMODB_ORGANIZATION_TABLE
 from exceptions import PrismDBException, PrismException, PrismMergeException
 from fastapi import APIRouter, Header
-from models import to_organization_model
+from models import get_organization_key, to_organization_model
 from models.RequestModels import GenerateLinkTokenRequest, IntegrationRequest
 from models.ResponseModels import (
     ErrorDTO,
@@ -125,7 +125,7 @@ async def integration(
     try:
         dynamodb_service.get_client().update_item(
             TableName=DYNAMODB_ORGANIZATION_TABLE,
-            Key={"id": {"S": integration_request.organization_id}},
+            Key=get_organization_key(integration_request.organization_id),
             UpdateExpression="SET link_id_map = :map, updated_at = :ua",
             ExpressionAttributeValues={
                 ":map": {"M": link_id_map},
@@ -236,7 +236,7 @@ async def remove_integration_detail(
 
         dynamodb_service.get_client().update_item(
             TableName=DYNAMODB_ORGANIZATION_TABLE,
-            Key={"id": {"S": org_id}},
+            Key=get_organization_key(org_id),
             UpdateExpression="SET link_id_map = :map, updated_at = :ua",
             ExpressionAttributeValues={
                 ":map": {"M": link_id_map},
