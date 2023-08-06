@@ -4,7 +4,8 @@ from .PrismException import PrismException
 
 
 class PrismEmailExceptionCode(Enum):
-    EMAIL_NOT_SENT = 4001
+    SIGNUP_EMAIL_NOT_SENT = 4001
+    TEMP_PW_EMAIL_NOT_SENT = 4002
 
 
 class PrismEmailException(PrismException):

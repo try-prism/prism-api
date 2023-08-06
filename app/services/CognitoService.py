@@ -1,6 +1,10 @@
 import logging
+import secrets
 
 import boto3
+from constants import COGNITO_USER_POOL_ID
+from exceptions import PrismIdentityException, PrismIdentityExceptionCode
+from services import SESService
 
 logger = logging.getLogger(__name__)
 
@@ -11,5 +15,61 @@ class CognitoService:
     def __init__(self):
         self.client = boto3.client("cognito-idp")
 
-    def remove_user(self, user_id: str):
-        pass
+    def create_user(
+        self, user_id: str, user_email: str, user_name: str, organization_id: str
+    ) -> None:
+        random_password = secrets.token_urlsafe(15)
+        logger.info(
+            "user_id=%s, user_email=%s, user_name=%s, organization_id=%s, random_password=%s",
+            user_id,
+            user_email,
+            user_name,
+            organization_id,
+            random_password,
+        )
+
+        try:
+            self.client.admin_create_user(
+                UserPoolId=COGNITO_USER_POOL_ID,
+                Username=user_id,
+                UserAttributes=[
+                    {"Name": "email", "Value": user_email},
+                    {"Name": "custom:name", "Value": user_name},
+                    {"Name": "custom:organization_id", "Value": organization_id},
+                ],
+                TemporaryPassword=random_password,
+                MessageAction="SUPPRESS",
+                DesiredDeliveryMediums=["EMAIL"],
+            )
+        except Exception as e:
+            logger.error(
+                "user_id=%s, user_email=%s, user_name=%s, organization_id=%s error=%s",
+                user_id,
+                user_email,
+                user_name,
+                organization_id,
+                str(e),
+            )
+            raise PrismIdentityException(
+                code=PrismIdentityExceptionCode.FAIL_CREATE_USER,
+                message="Failed to create user",
+            )
+
+        ses_service = SESService()
+        ses_service.send_temp_password_email(
+            org_user_email=user_email, temp_password=random_password
+        )
+
+    def remove_user(self, user_id: str) -> None:
+        logger.info("user_id: %s", user_id)
+
+        try:
+            self.client.admin_delete_user(
+                UserPoolId=COGNITO_USER_POOL_ID, Username=user_id
+            )
+        except Exception as e:
+            logger.error("user_id=%s, error=%s", user_id, str(e))
+            raise PrismIdentityException(
+                code=PrismIdentityExceptionCode.FAIL_DELETE_USER,
+                message="Failed to delete user",
+            )
