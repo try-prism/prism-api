@@ -192,9 +192,9 @@ async def update_organization(org_id: str, update_request: UpdateOrganizationReq
         logger.error("org_id=%s, update_request=%s error=%s", org_id, update_request, e)
         return ErrorDTO(code=e.code, description=e.message)
 
-    org = to_organization_model(response)
+    org_item = to_organization_model(response)
     timestamp = str(time.time())
-    if org.admin_id != update_request.prev_organization_admin_id:
+    if org_item.admin_id != update_request.prev_organization_admin_id:
         logger.error(
             "org_id=%s, update_request=%s error=no permission to edit this organization",
             org_id,

@@ -134,7 +134,7 @@ async def integration(
     timestamp = str(time.time())
 
     try:
-        link_id_map: dict = org_item.get("link_id_map", {"M": {}})["M"]
+        link_id_map = org_item.link_id_map
         link_id_map[account_token] = {
             "M": {"source": {"S": "UNKNOWN"}, "created": {"S": timestamp}}
         }
@@ -191,7 +191,7 @@ async def get_integration_detail(
     org_item = to_organization_model(response)
 
     try:
-        link_id_map = org_item.get("link_id_map", {"M": {}})["M"]
+        link_id_map = org_item.link_id_map
         logger.info("org_id=%s, link_id_map=%s", org_id, link_id_map)
         return IntegrationDetailResponse(
             status=HTTPStatus.OK.value, integrations=link_id_map
@@ -246,7 +246,7 @@ async def remove_integration_detail(
     timestamp = str(time.time())
 
     try:
-        link_id_map = org_item.get("link_id_map", {"M": {}})["M"]
+        link_id_map = org_item.link_id_map
         logger.info("org_id=%s, link_id_map=%s", org_id, link_id_map)
         del link_id_map[integration_account_token]
 

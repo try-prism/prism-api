@@ -64,16 +64,10 @@ async def register_user(
         whitelist_response = dynamodb_service.get_whitelist_user_data(
             user_id=register_request.id
         )
-    except PrismDBException as e:
-        logger.error("register_request=%s, error=%s", register_request, e)
-        return ErrorDTO(code=e.code, message=e.message)
-
-    whitelist_item = to_whitelist_model(whitelist_response)
-    logger.info(
-        "register_request=%s, whitelist_item=%s", register_request, whitelist_item
-    )
-
-    try:
+        whitelist_item = to_whitelist_model(whitelist_response)
+        logger.info(
+            "register_request=%s, whitelist_item=%s", register_request, whitelist_item
+        )
         dynamodb_service.register_user(
             id=register_request.id,
             email=register_request.email,

@@ -132,9 +132,9 @@ class DynamoDBService:
             e.message = "Could not find organization"
             raise e
 
-        org = to_organization_model(response)
+        org_item = to_organization_model(response)
 
-        if org.admin_id != org_admin_id:
+        if org_item.admin_id != org_admin_id:
             raise PrismDBException(
                 code=PrismDBExceptionCode.NOT_ENOUGH_PERMISSION,
                 message="You don't have permission to access this",
