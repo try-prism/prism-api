@@ -4,6 +4,7 @@ from typing import IO
 
 import ray
 from constants import RAY_RUNTIME_ENV
+from exceptions import PrismMergeException
 from llama_index import Document
 from llama_index.node_parser import SimpleNodeParser
 from llama_index.schema import BaseNode, TextNode
@@ -39,9 +40,12 @@ class DataPipelineService:
     ) -> list[dict[str, Document]]:
         documents = []
 
-        file_in_bytes: IO[bytes] = self.merge_service.download_file(
-            file=file_row["data"], in_bytes=True
-        )
+        try:
+            file_in_bytes: IO[bytes] = self.merge_service.download_file(
+                file=file_row["data"], in_bytes=True
+            )
+        except PrismMergeException as e:
+            logger.error("file_row=%s, error=%s", file_row, e)
 
         loaded_doc = self.loader.load_data(file=file_in_bytes, split_documents=False)
         loaded_doc[0].extra_info = {"file_id": file_row["data"].id}

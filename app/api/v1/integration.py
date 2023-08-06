@@ -4,7 +4,7 @@ from http import HTTPStatus
 
 from botocore.exceptions import ClientError
 from constants import DYNAMODB_ORGANIZATION_TABLE
-from exceptions import PrismDBException
+from exceptions import PrismDBException, PrismException, PrismMergeException
 from fastapi import APIRouter, Header
 from models import to_organization_model
 from models.RequestModels import GenerateLinkTokenRequest, IntegrationRequest
@@ -56,20 +56,15 @@ async def generate_link_token(
     logger.info(generate_request)
 
     merge_service = MergeService()
-    link_token = merge_service.generate_link_token(
-        generate_request.organization_id,
-        generate_request.organization_name,
-        generate_request.email_address,
-    )
-
-    if not link_token:
-        logger.error(
-            "generate_request=%s, error=Could not generate link_token", generate_request
+    try:
+        link_token = merge_service.generate_link_token(
+            generate_request.organization_id,
+            generate_request.organization_name,
+            generate_request.email_address,
         )
-        return ErrorDTO(
-            code=HTTPStatus.SERVICE_UNAVAILABLE.value,
-            description="Service is not available",
-        )
+    except PrismMergeException as e:
+        logger.error("generate_request=%s, error=%s", generate_request, e)
+        return ErrorDTO(code=e.code, message=e.message)
 
     logger.info("generate_request=%s, link_token=%s", generate_request, link_token)
     return GenerateLinkTokenResponse(status=HTTPStatus.OK.value, link_token=link_token)
@@ -100,29 +95,19 @@ async def integration(
 
     logger.info(integration_request)
 
-    # Generate Merge account_token from public_token
     merge_service = MergeService()
-    account_token = merge_service.generate_account_token(
-        integration_request.public_token
-    )
-
-    if not account_token:
-        logger.error(
-            "integration_request=%s, error=Failed to generate account token",
-            integration_request,
-        )
-        return ErrorDTO(
-            code=HTTPStatus.SERVICE_UNAVAILABLE.value,
-            description="Failed to fetch account token",
-        )
-
-    # Add account_token to organization's link_id_map
     dynamodb_service = DynamoDBService()
+
     try:
+        # Generate Merge account_token from public_token
+        account_token = merge_service.generate_account_token(
+            integration_request.public_token
+        )
+        # Add account_token to organization's link_id_map
         response = dynamodb_service.get_organization(
             integration_request.organization_id
         )
-    except PrismDBException as e:
+    except PrismException as e:
         logger.error(
             "integration_request=%s, error=%s",
             integration_request,
@@ -132,13 +117,12 @@ async def integration(
 
     org_item = to_organization_model(response)
     timestamp = str(time.time())
+    link_id_map = org_item.link_id_map
+    link_id_map[account_token] = {
+        "M": {"source": {"S": "UNKNOWN"}, "created": {"S": timestamp}}
+    }
 
     try:
-        link_id_map = org_item.link_id_map
-        link_id_map[account_token] = {
-            "M": {"source": {"S": "UNKNOWN"}, "created": {"S": timestamp}}
-        }
-
         dynamodb_service.get_client().update_item(
             TableName=DYNAMODB_ORGANIZATION_TABLE,
             Key={"id": {"S": integration_request.organization_id}},
