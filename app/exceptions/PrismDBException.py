@@ -1,5 +1,7 @@
 from enum import Enum
 
+from .PrismException import PrismException
+
 
 class PrismDBExceptionCode(Enum):
     ITEM_PUT_ERROR = 4001
@@ -13,13 +15,13 @@ class PrismDBExceptionCode(Enum):
     NOT_ENOUGH_PERMISSION = 4201
 
 
-class PrismDBException(Exception):
+class PrismDBException(PrismException):
     def __init__(self, code: PrismDBExceptionCode, message: str):
         self.code = code
         self.message = message
 
-    def __str__(self) -> str:
+    def __str__(self):
         return f"PrismDBException: [{self.code.value}] {self.code.name}: {self.message}"
 
-    def __repr__(self) -> str:
+    def __repr__(self):
         return f"PrismDBException: [{self.code.value}] {self.code.name}: {self.message}"
