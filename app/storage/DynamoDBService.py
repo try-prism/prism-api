@@ -8,6 +8,7 @@ from constants import (
     DYNAMODB_USER_TABLE,
     DYNAMODB_WHITELIST_TABLE,
 )
+from exceptions import PrismDBException, PrismDBExceptionCode
 from models import to_organization_model, to_user_model
 
 logger = logging.getLogger(__name__)
@@ -27,7 +28,7 @@ class DynamoDBService:
     def get_client(self):
         return self.client
 
-    def put_item(self, table_name: str, item: dict) -> bool:
+    def put_item(self, table_name: str, item: dict) -> None:
         try:
             self.client.put_item(
                 Item=item,
@@ -35,24 +36,28 @@ class DynamoDBService:
             )
         except ClientError as e:
             logger.error("table_name=%s, item=%s, error=%s", table_name, item, str(e))
-            return False
+            raise PrismDBException(
+                code=PrismDBExceptionCode.ITEM_PUT_ERROR,
+                message="Could not append item to table",
+            )
 
-        return True
-
-    def get_item(self, table_name: str, key: dict) -> dict | None:
+    def get_item(self, table_name: str, key: dict) -> dict:
         response = self.client.get_item(
             Key=key,
             TableName=table_name,
         )
 
         if "Item" not in response:
-            return None
+            raise PrismDBException(
+                code=PrismDBExceptionCode.ITEM_DOES_NOT_EXIST,
+                message="Item does not exist",
+            )
 
         return response
 
     def update_item(
         self, table_name: str, key: dict, field_name: str, field_value: dict
-    ) -> bool:
+    ) -> None:
         try:
             self.client.update_item(
                 TableName=table_name,
@@ -72,23 +77,27 @@ class DynamoDBService:
                 field_value,
                 str(e),
             )
-            return False
+            raise PrismDBException(
+                code=PrismDBExceptionCode.ITEM_UPDATE_ERROR,
+                message="Could not update item to table",
+            )
 
-        return True
-
-    def delete_item(self, table_name: str, key: dict) -> dict | None:
+    def delete_item(self, table_name: str, key: dict) -> dict:
         response = self.client.delete_item(
             TableName=table_name, Key=key, ReturnValues="ALL_OLD"
         )
 
         if "Item" not in response:
-            return None
+            raise PrismDBException(
+                code=PrismDBExceptionCode.ITEM_DOES_NOT_EXIST,
+                message="Item does not exist",
+            )
 
         return response
 
     def register_organization(
         self, org_id: str, org_name: str, org_admin_id: str
-    ) -> bool:
+    ) -> None:
         timestamp = str(time.time())
         new_organization = {
             "id": {"S": org_id},
@@ -103,90 +112,109 @@ class DynamoDBService:
             "updated_at": {"S": timestamp},
         }
 
-        response = self.put_item(DYNAMODB_ORGANIZATION_TABLE, new_organization)
+        self.put_item(DYNAMODB_ORGANIZATION_TABLE, new_organization)
 
-        return response
-
-    def get_organization(self, org_id: str) -> dict | None:
+    def get_organization(self, org_id: str) -> dict:
         key = {"id": {"S": org_id}}
-        response = self.get_item(DYNAMODB_ORGANIZATION_TABLE, key)
 
-        return response
+        try:
+            return self.get_item(DYNAMODB_ORGANIZATION_TABLE, key)
+        except PrismDBException as e:
+            e.message = "Could not find organization"
+            raise e
 
-    def remove_organization(self, org_id: str, org_admin_id: str) -> dict | None:
+    def remove_organization(self, org_id: str, org_admin_id: str) -> dict:
         key = {"id": {"S": org_id}}
-        response = self.get_item(DYNAMODB_ORGANIZATION_TABLE, key)
 
-        if not response:
-            return None
+        try:
+            response = self.get_item(DYNAMODB_ORGANIZATION_TABLE, key)
+        except PrismDBException as e:
+            e.message = "Could not find organization"
+            raise e
 
-        org = to_organization_model(response)
+        org_item = to_organization_model(response)
 
-        if org.admin_id != org_admin_id:
-            return None
+        if org_item.admin_id != org_admin_id:
+            raise PrismDBException(
+                code=PrismDBExceptionCode.NOT_ENOUGH_PERMISSION,
+                message="You don't have permission to access this",
+            )
 
         return self.delete_item(DYNAMODB_ORGANIZATION_TABLE, key)
 
     def modify_whitelist(
         self, org_id: str, org_name: str, org_user_id: str, is_remove: bool
-    ) -> bool:
-        if is_remove:
-            response = self.delete_item(
-                table_name=DYNAMODB_WHITELIST_TABLE, key={"S": org_user_id}
-            )
-        else:
-            timestamp = str(time.time())
-            new_whitelist_item = {
-                "id": {"S": org_user_id},
-                "org_name": {"S": org_name},
-                "org_id": {"S": org_id},
-                "created_at": {"S": timestamp},
-            }
+    ) -> None:
+        try:
+            if is_remove:
+                self.delete_item(
+                    table_name=DYNAMODB_WHITELIST_TABLE, key={"S": org_user_id}
+                )
+            else:
+                timestamp = str(time.time())
+                new_whitelist_item = {
+                    "id": {"S": org_user_id},
+                    "org_name": {"S": org_name},
+                    "org_id": {"S": org_id},
+                    "created_at": {"S": timestamp},
+                }
 
-            response = self.put_item(DYNAMODB_WHITELIST_TABLE, new_whitelist_item)
-
-        return response
+                self.put_item(DYNAMODB_WHITELIST_TABLE, new_whitelist_item)
+        except PrismDBException as e:
+            word = "remove" if is_remove else "add"
+            e.message = f"Failed to {word} user to the whitelist"
+            raise e
 
     def modify_invited_users_list(
         self, org_id: str, org_user_id: str, is_remove: bool
-    ) -> bool:
+    ) -> None:
         response = self.get_organization(org_id)
-
-        if not response:
-            return False
-
-        org_item = response["Item"]
-        invited_user_list: list = org_item.get("invited_user_list", {"L": {}})["L"]
+        org_item = to_organization_model(response)
+        invited_user_list = org_item.invited_user_list
 
         if is_remove:
             if org_user_id not in invited_user_list:
-                return False
+                raise PrismDBException(
+                    code=PrismDBExceptionCode.USER_NOT_INVITED,
+                    message="User is not invited",
+                )
 
             invited_user_list.remove(org_user_id)
         else:
             if org_user_id in invited_user_list:
-                return False
+                raise PrismDBException(
+                    code=PrismDBExceptionCode.USER_ALREADY_INVITED,
+                    message="User is already invited",
+                )
 
             invited_user_list.append(org_user_id)
 
-        update_response = self.update_item(
-            table_name=DYNAMODB_ORGANIZATION_TABLE,
-            key={"id": {"S": org_id}},
-            field_name="invited_user_list",
-            field_value={"L": invited_user_list},
-        )
+        try:
+            self.update_item(
+                table_name=DYNAMODB_ORGANIZATION_TABLE,
+                key={"id": {"S": org_id}},
+                field_name="invited_user_list",
+                field_value={"L": invited_user_list},
+            )
+        except PrismDBException as e:
+            word = "remove" if is_remove else "add"
+            e.message = f"Failed to {word} user to the invited user list"
+            raise e
 
-        return update_response
-
-    def get_whitelist_user_data(self, user_id: str) -> dict | None:
+    def get_whitelist_user_data(self, user_id: str) -> dict:
         key = {"id": {"S": user_id}}
-        response = self.get_item(DYNAMODB_WHITELIST_TABLE, key)
+
+        try:
+            response = self.get_item(DYNAMODB_WHITELIST_TABLE, key)
+        except PrismDBException as e:
+            e.message = "User is not invited to join"
+            raise e
 
         return response
 
     def register_user(
         self, id: str, email: str, name: str, organization_id: str
-    ) -> bool:
+    ) -> None:
         timestamp = str(time.time())
         new_user = {
             "id": {"S": id},
@@ -198,73 +226,62 @@ class DynamoDBService:
             "updated_at": {"S": timestamp},
         }
 
-        response = self.put_item(DYNAMODB_USER_TABLE, new_user)
+        self.put_item(DYNAMODB_USER_TABLE, new_user)
+        org_response = self.get_organization(organization_id)
 
-        if not response:
-            return False
-
-        response = self.get_organization(organization_id)
-
-        if not response:
-            return False
-
-        org_item = response["Item"]
-        user_list: list = org_item.get("user_list", {"L": {}})["L"]
+        org_item = to_organization_model(org_response)
+        user_list = org_item.user_list
         user_list.append(id)
 
-        update_response = self.update_item(
-            table_name=DYNAMODB_ORGANIZATION_TABLE,
-            key={"id": {"S": organization_id}},
-            field_name="user_list",
-            field_value={"L": user_list},
-        )
+        try:
+            self.update_item(
+                table_name=DYNAMODB_ORGANIZATION_TABLE,
+                key={"id": {"S": organization_id}},
+                field_name="user_list",
+                field_value={"L": user_list},
+            )
+        except PrismDBException as e:
+            e.message = "Could not add user to organization"
+            raise e
 
-        return update_response
-
-    def get_user(self, user_id: str) -> dict | None:
+    def get_user(self, user_id: str) -> dict:
         key = {"id": {"S": user_id}}
-        response = self.get_item(DYNAMODB_USER_TABLE, key)
+
+        try:
+            response = self.get_item(DYNAMODB_USER_TABLE, key)
+        except PrismDBException as e:
+            e.message = "Could not find user"
+            raise e
 
         return response
 
-    def remove_user(self, user_id: str, org_admin_id: str) -> dict | None:
-        key = {"id": {"S": user_id}}
-        response = self.get_item(DYNAMODB_USER_TABLE, key)
-
-        if not response:
-            return None
-
+    def remove_user(self, user_id: str, org_admin_id: str) -> dict:
+        response = self.get_user(user_id)
         user_model = to_user_model(response)
         org_response = self.get_organization(org_id=user_model.organization_id)
-
-        if not org_response:
-            return None
-
         org_model = to_organization_model(org_response)
 
         if org_model.admin_id != org_admin_id:
-            return None
+            raise PrismDBException(
+                code=PrismDBExceptionCode.NOT_ENOUGH_PERMISSION,
+                message="You don't have permission to remove user",
+            )
 
-        user_delete_response = self.delete_item(DYNAMODB_USER_TABLE, key)
-
-        if not user_delete_response:
-            return None
-
+        self.delete_item(DYNAMODB_USER_TABLE, {"id": {"S": user_id}})
         response = self.get_organization(user_model.organization_id)
+        org_item = to_organization_model(response)
+        user_list = org_item.user_list
 
-        if not response:
-            return False
-
-        org_item = response["Item"]
-        user_list: list = org_item.get("user_list", {"L": {}})["L"]
-        if id in user_list:
-            user_list.remove(id)
-
-        update_response = self.update_item(
-            table_name=DYNAMODB_ORGANIZATION_TABLE,
-            key={"id": {"S": user_model.organization_id}},
-            field_name="user_list",
-            field_value={"L": user_list},
-        )
-
-        return update_response
+        if user_id in user_list:
+            user_list.remove(user_id)
+            self.update_item(
+                table_name=DYNAMODB_ORGANIZATION_TABLE,
+                key={"id": {"S": user_model.organization_id}},
+                field_name="user_list",
+                field_value={"L": user_list},
+            )
+        else:
+            raise PrismDBException(
+                code=PrismDBExceptionCode.USER_DOES_NOT_EXIST,
+                message="User does not exist",
+            )

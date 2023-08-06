@@ -4,7 +4,9 @@ from http import HTTPStatus
 
 from botocore.exceptions import ClientError
 from constants import DYNAMODB_ORGANIZATION_TABLE
+from exceptions import PrismDBException, PrismException, PrismMergeException
 from fastapi import APIRouter, Header
+from models import to_organization_model
 from models.RequestModels import GenerateLinkTokenRequest, IntegrationRequest
 from models.ResponseModels import (
     ErrorDTO,
@@ -54,20 +56,15 @@ async def generate_link_token(
     logger.info(generate_request)
 
     merge_service = MergeService()
-    link_token = merge_service.generate_link_token(
-        generate_request.organization_id,
-        generate_request.organization_name,
-        generate_request.email_address,
-    )
-
-    if not link_token:
-        logger.error(
-            "generate_request=%s, error=Could not generate link_token", generate_request
+    try:
+        link_token = merge_service.generate_link_token(
+            generate_request.organization_id,
+            generate_request.organization_name,
+            generate_request.email_address,
         )
-        return ErrorDTO(
-            code=HTTPStatus.SERVICE_UNAVAILABLE.value,
-            description="Service is not available",
-        )
+    except PrismMergeException as e:
+        logger.error("generate_request=%s, error=%s", generate_request, e)
+        return ErrorDTO(code=e.code, message=e.message)
 
     logger.info("generate_request=%s, link_token=%s", generate_request, link_token)
     return GenerateLinkTokenResponse(status=HTTPStatus.OK.value, link_token=link_token)
@@ -98,45 +95,34 @@ async def integration(
 
     logger.info(integration_request)
 
-    # Generate Merge account_token from public_token
     merge_service = MergeService()
-    account_token = merge_service.generate_account_token(
-        integration_request.public_token
-    )
-
-    if not account_token:
-        logger.error(
-            "integration_request=%s, error=Failed to generate account token",
-            integration_request,
-        )
-        return ErrorDTO(
-            code=HTTPStatus.SERVICE_UNAVAILABLE.value,
-            description="Failed to fetch account token",
-        )
-
-    # Add account_token to organization's link_id_map
     dynamodb_service = DynamoDBService()
-    response = dynamodb_service.get_organization(integration_request.organization_id)
-
-    if not response:
-        logger.error(
-            "integration_request=%s, error=No such organization exists",
-            integration_request,
-        )
-        return ErrorDTO(
-            code=HTTPStatus.BAD_REQUEST.value,
-            description="No such organization exists",
-        )
-
-    org_item = response["Item"]
-    timestamp = str(time.time())
 
     try:
-        link_id_map: dict = org_item.get("link_id_map", {"M": {}})["M"]
-        link_id_map[account_token] = {
-            "M": {"source": {"S": "UNKNOWN"}, "created": {"S": timestamp}}
-        }
+        # Generate Merge account_token from public_token
+        account_token = merge_service.generate_account_token(
+            integration_request.public_token
+        )
+        # Add account_token to organization's link_id_map
+        response = dynamodb_service.get_organization(
+            integration_request.organization_id
+        )
+    except PrismException as e:
+        logger.error(
+            "integration_request=%s, error=%s",
+            integration_request,
+            e,
+        )
+        return ErrorDTO(code=e.code, description=e.message)
 
+    org_item = to_organization_model(response)
+    timestamp = str(time.time())
+    link_id_map = org_item.link_id_map
+    link_id_map[account_token] = {
+        "M": {"source": {"S": "UNKNOWN"}, "created": {"S": timestamp}}
+    }
+
+    try:
         dynamodb_service.get_client().update_item(
             TableName=DYNAMODB_ORGANIZATION_TABLE,
             Key={"id": {"S": integration_request.organization_id}},
@@ -180,19 +166,16 @@ async def get_integration_detail(
 
     # Retrieve organization's integration details
     dynamodb_service = DynamoDBService()
-    response = dynamodb_service.get_organization(org_id)
+    try:
+        response = dynamodb_service.get_organization(org_id)
+    except PrismDBException as e:
+        logger.error("org_id=%s, error=%s", org_id, e)
+        return ErrorDTO(code=e.code, description=e.message)
 
-    if not response:
-        logger.error("org_id=%s, error=No such organization exists", org_id)
-        return ErrorDTO(
-            code=HTTPStatus.BAD_REQUEST.value,
-            description="No such organization exists",
-        )
-
-    org_item = response["Item"]
+    org_item = to_organization_model(response)
 
     try:
-        link_id_map = org_item.get("link_id_map", {"M": {}})["M"]
+        link_id_map = org_item.link_id_map
         logger.info("org_id=%s, link_id_map=%s", org_id, link_id_map)
         return IntegrationDetailResponse(
             status=HTTPStatus.OK.value, integrations=link_id_map
@@ -232,24 +215,22 @@ async def remove_integration_detail(
 
     # Remove organization's integration detail
     dynamodb_service = DynamoDBService()
-    response = dynamodb_service.get_organization(org_id)
-
-    if not response:
+    try:
+        response = dynamodb_service.get_organization(org_id)
+    except PrismDBException as e:
         logger.error(
-            "org_id=%s, integration_account_token=%s, error=No such org exists",
+            "org_id=%s, integration_account_token=%s, error=%s",
             org_id,
-            integration,
+            integration_account_token,
+            e,
         )
-        return ErrorDTO(
-            code=HTTPStatus.BAD_REQUEST.value,
-            description="No such organization exists",
-        )
+        return ErrorDTO(code=e.code, description=e.message)
 
-    org_item = response["Item"]
+    org_item = to_organization_model(response)
     timestamp = str(time.time())
 
     try:
-        link_id_map = org_item.get("link_id_map", {"M": {}})["M"]
+        link_id_map = org_item.link_id_map
         logger.info("org_id=%s, link_id_map=%s", org_id, link_id_map)
         del link_id_map[integration_account_token]
 

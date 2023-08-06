@@ -1,8 +1,9 @@
 import logging
 from http import HTTPStatus
 
+from exceptions import PrismDBException
 from fastapi import APIRouter, Header
-from models import to_whitelist_model
+from models import to_user_model, to_whitelist_model
 from models.RequestModels import (
     CancelInviteUserOrganizationRequest,
     RegisterUserRequest,
@@ -15,7 +16,6 @@ from models.ResponseModels import (
     GetUserResponse,
     RegisterUserResponse,
 )
-from models.UserModel import to_user_model
 from storage import DynamoDBService
 
 from .organization import cancel_pending_user_invite
@@ -60,41 +60,27 @@ async def register_user(
     logger.info("register_request=%s", register_request)
 
     dynamodb_service = DynamoDBService()
-    whitelist_response = dynamodb_service.get_whitelist_user_data(
-        user_id=register_request.id
-    )
-
-    if not whitelist_response:
+    try:
+        whitelist_response = dynamodb_service.get_whitelist_user_data(
+            user_id=register_request.id
+        )
+        whitelist_item = to_whitelist_model(whitelist_response)
+        logger.info(
+            "register_request=%s, whitelist_item=%s", register_request, whitelist_item
+        )
+        dynamodb_service.register_user(
+            id=register_request.id,
+            email=register_request.email,
+            name=register_request.name,
+            organization_id=whitelist_item.org_id,
+        )
+    except PrismDBException as e:
         logger.error(
-            "register_request=%s, error=User is not listed in whitelist",
+            "register_request=%s, error=%s",
             register_request,
+            e,
         )
-        return ErrorDTO(
-            code=HTTPStatus.BAD_REQUEST.value,
-            description="User is not invited to join",
-        )
-
-    whitelist_item = to_whitelist_model(whitelist_response)
-    logger.info(
-        "register_request=%s, whitelist_item=%s", register_request, whitelist_item
-    )
-
-    register_response = dynamodb_service.register_user(
-        id=register_request.id,
-        email=register_request.email,
-        name=register_request.name,
-        organization_id=whitelist_item.org_id,
-    )
-
-    if not register_response:
-        logger.error(
-            "register_request=%s, error=Failed to register user",
-            register_request,
-        )
-        return ErrorDTO(
-            code=HTTPStatus.BAD_REQUEST.value,
-            description="Failed to register user",
-        )
+        return ErrorDTO(code=e.code, message=e.message)
 
     remove_request = cancel_pending_user_invite(
         org_id=whitelist_item.org_id,
@@ -133,13 +119,11 @@ async def get_user(id: str):
     logger.info("id=%s", id)
 
     dynamodb_service = DynamoDBService()
-    response = dynamodb_service.get_user(user_id=id)
-
-    if not response:
-        return ErrorDTO(
-            code=HTTPStatus.BAD_REQUEST.value,
-            description="No such user",
-        )
+    try:
+        response = dynamodb_service.get_user(user_id=id)
+    except PrismDBException as e:
+        logger.error("id=%s, error=%s", id, e)
+        return ErrorDTO(code=e.code, message=e.message)
 
     return GetUserResponse(status=HTTPStatus.OK.value, user=to_user_model(response))
 
@@ -164,23 +148,11 @@ async def delete_user(id: str, org_admin_id: str = Header()):
     logger.info("id=%s", id)
 
     dynamodb_service = DynamoDBService()
-    response = dynamodb_service.get_user(user_id=id)
-
-    if not response:
-        return ErrorDTO(
-            code=HTTPStatus.BAD_REQUEST.value,
-            description="No such user",
-        )
-
-    remove_response = dynamodb_service.remove_user(
-        user_id=id, org_admin_id=org_admin_id
-    )
-
-    if not remove_response:
-        return ErrorDTO(
-            code=HTTPStatus.BAD_REQUEST.value,
-            description="Failed to remove user",
-        )
+    try:
+        dynamodb_service.remove_user(user_id=id, org_admin_id=org_admin_id)
+    except PrismDBException as e:
+        logger.error("id=%s, org_admin_id=%s, error=%s", id, org_admin_id, e)
+        return ErrorDTO(code=e.code, message=e.message)
 
     # TODO: remove the user from the cognito
 
@@ -207,13 +179,11 @@ async def get_invitation_data(id: str):
     logger.info("id=%s", id)
 
     dynamodb_service = DynamoDBService()
-    response = dynamodb_service.get_whitelist_user_data(user_id=id)
-
-    if not response:
-        return ErrorDTO(
-            code=HTTPStatus.BAD_REQUEST.value,
-            description="User is not invited to join",
-        )
+    try:
+        response = dynamodb_service.get_whitelist_user_data(user_id=id)
+    except PrismDBException as e:
+        logger.error("id=%s, error=%s", id, e)
+        return ErrorDTO(code=e.code, message=e.message)
 
     whitelist_item = to_whitelist_model(response)
     logger.info("id=%s, whitelist_item=%s", id, whitelist_item)
