@@ -5,7 +5,7 @@ from http import HTTPStatus
 from botocore.exceptions import ClientError
 from constants import DYNAMODB_ORGANIZATION_TABLE
 from exceptions import PrismDBException, PrismException, PrismMergeException
-from fastapi import APIRouter, Header
+from fastapi import APIRouter, BackgroundTasks, Header
 from models import get_organization_key, to_organization_model
 from models.RequestModels import GenerateLinkTokenRequest, IntegrationRequest
 from models.ResponseModels import (
@@ -16,6 +16,7 @@ from models.ResponseModels import (
     IntegrationResponse,
 )
 from storage import DynamoDBService, MergeService
+from tasks.IntegrationTask import initiate_file_processing
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -82,6 +83,7 @@ async def generate_link_token(
 )
 async def integration(
     integration_request: IntegrationRequest,
+    background_tasks: BackgroundTasks,
 ):
     if (
         not integration_request.public_token
@@ -119,7 +121,11 @@ async def integration(
     timestamp = str(time.time())
     link_id_map = org_item.link_id_map
     link_id_map[account_token] = {
-        "M": {"source": {"S": "UNKNOWN"}, "created": {"S": timestamp}}
+        "M": {
+            "source": {"S": "UNKNOWN"},
+            "created": {"S": timestamp},
+            "status": {"S": "SYNCING"},
+        }
     }
 
     try:
@@ -139,7 +145,10 @@ async def integration(
             description=str(e),
         )
 
-    # TODO: process file processing here
+    # Initiate background task that processes the files to create docstore and index
+    background_tasks.add_task(
+        initiate_file_processing, integration_request, account_token
+    )
 
     return IntegrationResponse(status=HTTPStatus.OK.value)
 
