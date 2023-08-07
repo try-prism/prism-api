@@ -38,17 +38,16 @@ Ask teammates for the environment configuration
 touch .env
 ```
 
-6. Setup variable for Ray instance
+6. Start local Ray instance
 
 ```bash
-export RAY_ENABLE_WINDOWS_OR_OSX_CLUSTER=1
+ray start --head --port=6379
 ```
 
 7. Run the api using the following command
 
 ```bash
 cd app
-# ray start --head --port=6379
 python -m uvicorn main:app --workers 4
 ```
 

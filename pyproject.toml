@@ -19,6 +19,7 @@ ray = {extras = ["default"], version = "^2.6.2"}
 unstructured = {extras = ["csv", "doc", "docx", "html", "pdf", "ppt", "pptx", "rtf", "txt", "xlsx"], version = "^0.9.0"}
 uvicorn = "^0.23.2"
 websockets = "^11.0.3"
+gpustat = "1.0.0"
 
 
 [tool.poetry.group.dev.dependencies]
