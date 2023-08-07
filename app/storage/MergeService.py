@@ -1,12 +1,20 @@
 import io
 import logging
+import time
 import uuid
 from typing import IO
 
 from constants import MERGE_API_KEY, SUPPORTED_EXTENSIONS
 from exceptions import PrismMergeException, PrismMergeExceptionCode
 from merge.client import Merge
-from merge.resources.filestorage.types import CategoriesEnum, File, PaginatedFileList
+from merge.core.api_error import ApiError
+from merge.resources.filestorage.types import (
+    CategoriesEnum,
+    File,
+    PaginatedFileList,
+    PaginatedFolderList,
+    SyncStatusStatusEnum,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -55,20 +63,96 @@ class MergeService:
 
         return account_token_response.account_token
 
-    def list_files(
-        self, page_size: int | None = 50, next: str | None = None
-    ) -> PaginatedFileList:
+    def check_sync_status(self) -> bool:
         if not self.account_token:
-            logger.error("Invalid account token")
+            logger.error("Account token can't be null")
             raise PrismMergeException(
                 code=PrismMergeExceptionCode.INVALID_ACCOUNT_TOKEN,
-                message="Invalid account token",
+                message="Account token can't be null",
             )
 
         try:
-            file_list = self.client.filestorage.files.list(
-                page_size=page_size, cursor=next
+            sync_status = self.client.filestorage.sync_status.list(page_size=100)
+            results = sync_status.results
+
+            if all(r.status == SyncStatusStatusEnum.DONE for r in results):
+                return True
+
+            if any(r.status == SyncStatusStatusEnum.FAILED for r in results):
+                raise PrismMergeException(
+                    code=PrismMergeExceptionCode.FAILED_TO_SYNC,
+                    message="Failed to sync",
+                )
+        except Exception as e:
+            logger.error("account_token=%s, error=%s", self.account_token, str(e))
+
+            if isinstance(e, PrismMergeException):
+                raise e
+
+            raise PrismMergeException(
+                code=PrismMergeExceptionCode.UNKNOWN,
+                message=str(e),
             )
+
+        return False
+
+    def list_folders_in_folder(
+        self,
+        folder_id: str | None = None,
+        drive_id: str | None = None,
+        next: str | None = None,
+    ) -> PaginatedFolderList:
+        if not self.account_token:
+            logger.error("Account token can't be null")
+            raise PrismMergeException(
+                code=PrismMergeExceptionCode.INVALID_ACCOUNT_TOKEN,
+                message="Account token can't be null",
+            )
+
+        if not folder_id and not drive_id:
+            logger.error(
+                "account_token=%s, folder_id=%s, drive_id=%s, next=%s, error=%s",
+                self.account_token,
+                folder_id,
+                drive_id,
+                next,
+                "Either drive id or folder id is required",
+            )
+            raise PrismMergeException(
+                code=PrismMergeExceptionCode.REQUIRES_DRIVE_ID,
+                message="Either drive id or folder id is required",
+            )
+
+        try:
+            folder_list = self.client.filestorage.folders.list(
+                page_size=100, folder_id=folder_id, drive_id=drive_id, cursor=next
+            )
+        except Exception as e:
+            logger.error(
+                "account_token=%s, folder_id=%s, drive_id=%s, next=%s, error=%s",
+                self.account_token,
+                folder_id,
+                drive_id,
+                next,
+                str(e),
+            )
+            raise PrismMergeException(
+                code=PrismMergeExceptionCode.COULD_NOT_LIST_FOLDERS,
+                message="Could not fetch folders",
+            )
+
+        return folder_list
+
+    def list_all_files(self, next: str | None = None) -> PaginatedFileList:
+        if not self.account_token:
+            logger.error("Account token can't be null")
+            raise PrismMergeException(
+                code=PrismMergeExceptionCode.INVALID_ACCOUNT_TOKEN,
+                message="Account token can't be null",
+            )
+
+        try:
+            file_list = self.client.filestorage.files.list(page_size=100, cursor=next)
         except Exception as e:
             logger.error(
                 "account_token=%s, next=%s, error=%s", self.account_token, next, str(e)
@@ -80,14 +164,34 @@ class MergeService:
 
         return file_list
 
+    def generate_file_list(self) -> list[File]:
+        file_list: list[File] = []
+        response = self.list_all_files()
+
+        file_list.extend(response.results)
+
+        while response.next is not None:
+            try:
+                response = self.list_all_files(next=response.next)
+                file_list.extend(response.results)
+            except ApiError as e:
+                logger.info(
+                    "account_token=%s, error=%s, Too many requests. Waiting for 1 min to resume..",
+                    self.account_token,
+                    e,
+                )
+                time.sleep(60)
+
+        return file_list
+
     def download_file(
         self, file: File, in_bytes: bool | None = False
     ) -> IO[bytes] | str:
         if not self.account_token:
-            logger.error("Invalid account token")
+            logger.error("Account token can't be null")
             raise PrismMergeException(
                 code=PrismMergeExceptionCode.INVALID_ACCOUNT_TOKEN,
-                message="Invalid account token",
+                message="Account token can't be null",
             )
 
         file_extension = file.name.split(".")[-1]

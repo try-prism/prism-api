@@ -5,7 +5,7 @@ from http import HTTPStatus
 from botocore.exceptions import ClientError
 from constants import DYNAMODB_ORGANIZATION_TABLE
 from exceptions import PrismDBException, PrismException, PrismMergeException
-from fastapi import APIRouter, Header
+from fastapi import APIRouter, BackgroundTasks, Header
 from models import get_organization_key, to_organization_model
 from models.RequestModels import GenerateLinkTokenRequest, IntegrationRequest
 from models.ResponseModels import (
@@ -16,6 +16,7 @@ from models.ResponseModels import (
     IntegrationResponse,
 )
 from storage import DynamoDBService, MergeService
+from tasks.IntegrationTask import initiate_file_processing
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -82,6 +83,7 @@ async def generate_link_token(
 )
 async def integration(
     integration_request: IntegrationRequest,
+    background_tasks: BackgroundTasks,
 ):
     if (
         not integration_request.public_token
@@ -104,8 +106,10 @@ async def integration(
             integration_request.public_token
         )
         # Add account_token to organization's link_id_map
-        response = dynamodb_service.get_organization(
-            integration_request.organization_id
+        dynamodb_service.add_integration(
+            org_id=integration_request.organization_id,
+            account_token=account_token,
+            status="SYNCING",
         )
     except PrismException as e:
         logger.error(
@@ -115,31 +119,10 @@ async def integration(
         )
         return ErrorDTO(code=e.code, description=e.message)
 
-    org_item = to_organization_model(response)
-    timestamp = str(time.time())
-    link_id_map = org_item.link_id_map
-    link_id_map[account_token] = {
-        "M": {"source": {"S": "UNKNOWN"}, "created": {"S": timestamp}}
-    }
-
-    try:
-        dynamodb_service.get_client().update_item(
-            TableName=DYNAMODB_ORGANIZATION_TABLE,
-            Key=get_organization_key(integration_request.organization_id),
-            UpdateExpression="SET link_id_map = :map, updated_at = :ua",
-            ExpressionAttributeValues={
-                ":map": {"M": link_id_map},
-                ":ua": {"S": timestamp},
-            },
-        )
-    except ClientError as e:
-        logger.error(str(e))
-        return ErrorDTO(
-            code=HTTPStatus.BAD_REQUEST.value,
-            description=str(e),
-        )
-
-    # TODO: process file processing here
+    # Initiate background task that processes the files to create docstore and index
+    background_tasks.add_task(
+        initiate_file_processing, integration_request, account_token
+    )
 
     return IntegrationResponse(status=HTTPStatus.OK.value)
 

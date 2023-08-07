@@ -1,12 +1,6 @@
 import logging
 
-from api.v1 import (
-    integration_router,
-    organization_router,
-    process_router,
-    query_router,
-    user_router,
-)
+from api.v1 import integration_router, organization_router, query_router, user_router
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
@@ -49,6 +43,5 @@ def prism_openapi() -> dict:
 app.openapi = prism_openapi
 app.include_router(integration_router, prefix="/v1")
 app.include_router(organization_router, prefix="/v1")
-app.include_router(process_router, prefix="/v1")
 app.include_router(query_router, prefix="/v1")
 app.include_router(user_router, prefix="/v1")

@@ -7,18 +7,18 @@ readme = "README.md"
 packages = []
 
 [tool.poetry.dependencies]
-python = "^3.10"
-fastapi = "^0.100.1"
-llama-index = "^0.7.19"
-python-dotenv = "^1.0.0"
 boto3 = "^1.28.16"
-uvicorn = "^0.23.2"
-mergepythonclient = "^0.2.1"
-unstructured = {extras = ["csv", "doc", "docx", "html", "pdf", "ppt", "pptx", "rtf", "txt", "xlsx"], version = "^0.9.0"}
-ray = {extras = ["default"], version = "^2.6.2"}
-langchain = {extras = ["llms"], version = "^0.0.251"}
-websockets = "^11.0.3"
 cohere = "^4.19.2"
+fastapi = "^0.100.1"
+langchain = {extras = ["llms"], version = "^0.0.251"}
+llama-index = "^0.7.19"
+mergepythonclient = "^0.2.1"
+python = "^3.10"
+python-dotenv = "^1.0.0"
+ray = {extras = ["default"], version = "^2.6.2"}
+unstructured = {extras = ["csv", "doc", "docx", "html", "pdf", "ppt", "pptx", "rtf", "txt", "xlsx"], version = "^0.9.0"}
+uvicorn = "^0.23.2"
+websockets = "^11.0.3"
 
 
 [tool.poetry.group.dev.dependencies]
