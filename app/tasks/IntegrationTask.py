@@ -1,4 +1,5 @@
 import logging
+import time
 
 from models.RequestModels import IntegrationRequest
 from pipeline import DataIndexingService, DataPipelineService
@@ -15,9 +16,16 @@ def initiate_file_processing(
     )
 
     dynamodb_service = DynamoDBService()
+    merge_service = MergeService(account_token=account_token)
 
     try:
-        merge_service = MergeService(account_token=account_token)
+        status = merge_service.check_sync_status()
+
+        # Wait for the Merge sync to complete before continuing
+        while not status:
+            time.sleep(120)  # 120 seconds
+            status = merge_service.check_sync_status()
+
         file_list = merge_service.generate_file_list()
 
         dynamodb_service.add_integration(
