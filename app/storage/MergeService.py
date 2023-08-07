@@ -1,11 +1,13 @@
 import io
 import logging
+import time
 import uuid
 from typing import IO
 
 from constants import MERGE_API_KEY, SUPPORTED_EXTENSIONS
 from exceptions import PrismMergeException, PrismMergeExceptionCode
 from merge.client import Merge
+from merge.core.api_error import ApiError
 from merge.resources.filestorage.types import (
     CategoriesEnum,
     File,
@@ -159,6 +161,26 @@ class MergeService:
                 code=PrismMergeExceptionCode.COULD_NOT_LIST_FILES,
                 message="Could not fetch files",
             )
+
+        return file_list
+
+    def generate_file_list(self) -> list[File]:
+        file_list: list[File] = []
+        response = self.list_all_files()
+
+        file_list.extend(response.results)
+
+        while response.next is not None:
+            try:
+                response = self.list_all_files(next=response.next)
+                file_list.extend(response.results)
+            except ApiError as e:
+                logger.info(
+                    "account_token=%s, error=%s, Too many requests. Waiting for 1 min to resume..",
+                    self.account_token,
+                    e,
+                )
+                time.sleep(60)
 
         return file_list
 
