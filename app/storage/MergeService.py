@@ -81,10 +81,12 @@ class MergeService:
                     code=PrismMergeExceptionCode.FAILED_TO_SYNC,
                     message="Failed to sync",
                 )
-        except PrismMergeException as e:
-            raise e
         except Exception as e:
-            logger.error("account_token=%s, error=%s", self.account_token, e)
+            logger.error("account_token=%s, error=%s", self.account_token, str(e))
+
+            if isinstance(e, PrismMergeException):
+                raise e
+
             raise PrismMergeException(
                 code=PrismMergeExceptionCode.UNKNOWN,
                 message=str(e),
