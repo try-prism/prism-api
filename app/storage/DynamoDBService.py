@@ -288,3 +288,29 @@ class DynamoDBService:
                 code=PrismDBExceptionCode.USER_DOES_NOT_EXIST,
                 message="User does not exist",
             )
+
+    def add_integration(self, org_id: str, account_token: str, status: str) -> None:
+        """
+        def update_item(
+            self, table_name: str, key: dict, field_name: str, field_value: dict
+        ) -> None:
+        """
+        response = self.get_organization(org_id)
+        org_item = to_organization_model(response)
+
+        timestamp = str(time.time())
+        link_id_map = org_item.link_id_map
+        link_id_map[account_token] = {
+            "M": {
+                "source": {"S": "UNKNOWN"},
+                "created": {"S": timestamp},
+                "status": {"S": status},
+            }
+        }
+
+        self.update_item(
+            DYNAMODB_ORGANIZATION_TABLE,
+            get_organization_key(org_id),
+            field_name="link_id_map",
+            field_value=link_id_map,
+        )
