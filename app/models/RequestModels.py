@@ -1,5 +1,7 @@
 from pydantic import BaseModel
 
+from .SyncFileModel import SyncFileModel
+
 
 class IntegrationRequest(BaseModel):
     public_token: str
@@ -42,4 +44,4 @@ class RegisterUserRequest(BaseModel):
 
 class SyncOrganizationDataRequest(BaseModel):
     account_token: str
-    file_ids: list[str]
+    files: list[SyncFileModel]

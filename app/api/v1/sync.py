@@ -2,6 +2,7 @@ import logging
 from http import HTTPStatus
 
 from constants import DYNAMODB_FILE_TABLE
+from enums import FileOperation
 from exceptions import PrismException
 from fastapi import APIRouter
 from merge.resources.filestorage.types import File
@@ -36,7 +37,7 @@ async def sync_organization_data(
     org_id: str,
     sync_request: SyncOrganizationDataRequest,
 ):
-    if not sync_request.account_token or not sync_request.file_ids:
+    if not sync_request.account_token or not sync_request.files:
         return ErrorDTO(
             code=HTTPStatus.BAD_REQUEST.value,
             description="Invalid SyncOrganizationDataRequest",
@@ -50,12 +51,28 @@ async def sync_organization_data(
         account_token=sync_request.account_token
     )
 
-    file_id_batch: list[str] = divide_list(sync_request.file_ids, 50)
+    id_batches = {
+        FileOperation.CREATED: [],
+        FileOperation.UPDATED: [],
+        FileOperation.DELETED: [],
+    }
+
+    for file in sync_request.files:
+        id_batches[file.operation].append(file.id)
+
     files: list[File] = []
+    file_id_batch: list[str] = divide_list(
+        id_batches[FileOperation.CREATED] + id_batches[FileOperation.UPDATED], 50
+    )
 
     try:
         # Remove old data nodes
-        data_index_service.delete_nodes(sync_request.file_ids)
+        data_index_service.delete_nodes(id_batches[FileOperation.UPDATED])
+        data_index_service.delete_nodes(id_batches[FileOperation.DELETED])
+
+        # TODO: batch delete items that is FileOperation.DELETED from DYNAMODB_FILE_TABLE
+        # TODO: batch put items that is FileOperation.CREATED into DYNAMODB_FILE_TABLE
+        # TODO: Also update those in organization table
 
         # Get files
         for batch in file_id_batch:
