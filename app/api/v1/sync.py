@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
         400: {"model": ErrorDTO, "description": "Error: Bad request"},
     },
 )
-async def register_organization(
+async def sync_organization_data(
     org_id: str,
     sync_request: SyncOrganizationDataRequest,
 ):
