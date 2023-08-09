@@ -56,9 +56,9 @@ class DataPipelineService:
     def get_embedded_nodes(self, all_files: list[File]) -> Sequence[BaseNode]:
         loaded_docs = self.load_data(all_files)
         nodes = self.generate_nodes(loaded_docs)
-        ray_docs_nodes = self.generate_embeddings(nodes)
+        embeddings = self.generate_embeddings(nodes)
 
-        return ray_docs_nodes
+        return embeddings
 
     def load_and_parse_files(
         self, file_row: dict[str, File]
@@ -134,11 +134,11 @@ class DataPipelineService:
         )
 
         # Trigger execution and collect all the embedded nodes.
-        ray_docs_nodes = []
+        embeddings = []
 
         for row in embedded_nodes.iter_rows():
             node = row["embedded_nodes"]
             assert node.embedding is not None
-            ray_docs_nodes.append(node)
+            embeddings.append(node)
 
-        return ray_docs_nodes
+        return embeddings
