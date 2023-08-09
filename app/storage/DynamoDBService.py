@@ -1,18 +1,22 @@
 import logging
 import time
+from typing import Any
 
 import boto3
 from botocore.exceptions import ClientError
 from constants import (
+    DYNAMODB_FILE_TABLE,
     DYNAMODB_ORGANIZATION_TABLE,
     DYNAMODB_USER_TABLE,
     DYNAMODB_WHITELIST_TABLE,
 )
 from exceptions import PrismDBException, PrismDBExceptionCode
+from merge.resources.filestorage.types import File
 from models import (
     OrganizationModel,
     UserModel,
     WhitelistModel,
+    get_file_key,
     get_organization_key,
     get_user_key,
     to_organization_model,
@@ -64,8 +68,27 @@ class DynamoDBService:
 
         return response
 
+    def batch_get_item(
+        self, table_name: str, field_name: str, field_values: list[str]
+    ) -> dict:
+        key = {table_name: {"Keys": [{field_name: item} for item in field_values]}}
+        response = self.client.batch_get_item(RequestItems=key)
+
+        if "Responses" not in response:
+            raise PrismDBException(
+                code=PrismDBExceptionCode.ITEM_BATCH_GET_ERROR,
+                message="Failed to get items from table",
+            )
+
+        retrieved = {}
+
+        for key in response["Responses"]:
+            retrieved[key] += response["Responses"][key]
+
+        return retrieved
+
     def update_item(
-        self, table_name: str, key: dict, field_name: str, field_value: dict
+        self, table_name: str, key: dict, field_name: str, field_value: Any
     ) -> None:
         try:
             self.client.update_item(
@@ -131,7 +154,7 @@ class DynamoDBService:
             return to_organization_model(response)
         except PrismDBException as e:
             e.message = "Could not find organization"
-            raise e
+            raise
 
     def remove_organization(self, org_id: str, org_admin_id: str) -> dict:
         key = get_organization_key(org_id)
@@ -140,7 +163,7 @@ class DynamoDBService:
             response = self.get_item(DYNAMODB_ORGANIZATION_TABLE, key)
         except PrismDBException as e:
             e.message = "Could not find organization"
-            raise e
+            raise
 
         org_item = to_organization_model(response)
 
@@ -173,7 +196,7 @@ class DynamoDBService:
         except PrismDBException as e:
             word = "remove" if is_remove else "add"
             e.message = f"Failed to {word} user to the whitelist"
-            raise e
+            raise
 
     def modify_invited_users_list(
         self, org_id: str, org_user_id: str, is_remove: bool
@@ -208,7 +231,7 @@ class DynamoDBService:
         except PrismDBException as e:
             word = "remove" if is_remove else "add"
             e.message = f"Failed to {word} user to the invited user list"
-            raise e
+            raise
 
     def get_whitelist_user_data(self, user_id: str) -> WhitelistModel:
         key = get_user_key(user_id)
@@ -218,7 +241,7 @@ class DynamoDBService:
             return to_whitelist_model(response)
         except PrismDBException as e:
             e.message = "User is not invited to join"
-            raise e
+            raise
 
     def register_user(
         self, id: str, email: str, name: str, organization_id: str
@@ -248,7 +271,7 @@ class DynamoDBService:
             )
         except PrismDBException as e:
             e.message = "Could not add user to organization"
-            raise e
+            raise
 
     def get_user(self, user_id: str) -> UserModel:
         try:
@@ -256,7 +279,7 @@ class DynamoDBService:
             return to_user_model(response)
         except PrismDBException as e:
             e.message = "Could not find user"
-            raise e
+            raise
 
     def remove_user(self, user_id: str, org_admin_id: str) -> dict:
         user = self.get_user(user_id)
@@ -286,11 +309,6 @@ class DynamoDBService:
             )
 
     def add_integration(self, org_id: str, account_token: str, status: str) -> None:
-        """
-        def update_item(
-            self, table_name: str, key: dict, field_name: str, field_value: dict
-        ) -> None:
-        """
         response = self.get_organization(org_id)
         org_item = to_organization_model(response)
 
@@ -310,3 +328,51 @@ class DynamoDBService:
             field_name="link_id_map",
             field_value=link_id_map,
         )
+
+    def modify_organization_files(
+        self, org_id: str, file_id: str, is_remove: bool
+    ) -> None:
+        response = self.get_organization(org_id)
+        org_item = to_organization_model(response)
+
+        document_list = org_item.document_list
+        if is_remove:
+            if file_id in document_list:
+                document_list.remove(file_id)
+        else:
+            if file_id not in document_list:
+                document_list.append(file_id)
+
+        self.update_item(
+            DYNAMODB_ORGANIZATION_TABLE,
+            get_organization_key(org_id),
+            field_name="document_list",
+            field_value=document_list,
+        )
+
+    def add_file(self, file: File) -> None:
+        new_file = {
+            "id": {"S": file.id or ""},
+            "remote_id": {"S": file.remote_id or ""},
+            "name": {"S": file.name or ""},
+            "file_url": {"S": file.file_url or ""},
+            "file_thumbnail_url": {"S": file.file_thumbnail_url or ""},
+            "size": {"N": file.size or 0},
+            "mime_type": {"S": file.mime_type or ""},
+            "description": {"S": file.description or ""},
+            "folder": {"S": file.folder or ""},
+            "permissions": {"L": file.permissions or []},
+            "drive": {"S": file.drive or ""},
+            "remote_created_at": {"S": file.remote_created_at or ""},
+            "remote_updated_at": {"S": file.remote_updated_at or ""},
+            "remote_was_deleted": {"BOOL": file.remote_was_deleted or False},
+            "modified_at": {"S": file.modified_at or ""},
+            "field_mappings": {"M": file.field_mappings or {}},
+            "remote_data": {"L": file.remote_data or []},
+        }
+
+        self.put_item(DYNAMODB_FILE_TABLE, new_file)
+
+    def remove_file(self, file_id: str) -> None:
+        key = get_file_key(file_id)
+        self.delete_item(DYNAMODB_FILE_TABLE, key)

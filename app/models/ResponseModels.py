@@ -69,3 +69,7 @@ class DeleteUserResponse(BaseModel):
 class GetInvitationResponse(BaseModel):
     status: int
     whitelist_user: WhitelistModel
+
+
+class SyncOrganizationDataResponse(BaseModel):
+    status: int

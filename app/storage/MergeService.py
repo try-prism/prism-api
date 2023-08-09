@@ -87,7 +87,7 @@ class MergeService:
             logger.error("account_token=%s, error=%s", self.account_token, str(e))
 
             if isinstance(e, PrismMergeException):
-                raise e
+                raise
 
             raise PrismMergeException(
                 code=PrismMergeExceptionCode.UNKNOWN,
