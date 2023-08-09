@@ -8,13 +8,12 @@ from constants import (
     COHERE_API_KEY,
     DEFAULT_OPENAI_MODEL,
     DYNAMODB_ORGANIZATION_TABLE,
-    DYNAMODB_STORAGE_CONTEXT_TABLE,
     ZILLIZ_CLOUD_HOST,
     ZILLIZ_CLOUD_PASSWORD,
     ZILLIZ_CLOUD_PORT,
     ZILLIZ_CLOUD_USER,
 )
-from exceptions import PrismDBException
+from exceptions import PrismDBException, PrismDBExceptionCode
 from llama_index import (
     ServiceContext,
     StorageContext,
@@ -30,7 +29,6 @@ from llama_index.indices.postprocessor import (
 from llama_index.indices.postprocessor.cohere_rerank import CohereRerank
 from llama_index.llms import OpenAI
 from llama_index.schema import BaseNode
-from llama_index.storage.index_store.dynamodb_index_store import DynamoDBIndexStore
 from llama_index.vector_stores import MilvusVectorStore
 from models import get_organization_key, to_organization_model
 from storage import DynamoDBService
@@ -43,9 +41,6 @@ class DataIndexingService:
         self.org_id = org_id
         self.account_token = account_token
         self.storage_context = StorageContext.from_defaults(
-            index_store=DynamoDBIndexStore.from_table_name(
-                table_name=DYNAMODB_STORAGE_CONTEXT_TABLE, namespace=org_id
-            ),
             vector_store=MilvusVectorStore(
                 collection_name=org_id,
                 host=ZILLIZ_CLOUD_HOST,
@@ -56,25 +51,16 @@ class DataIndexingService:
             ),
         )
 
-    def store_vectors(self, nodes: Sequence[BaseNode]) -> bool:
+    def store_vectors(self, nodes: Sequence[BaseNode]) -> None:
         logger.info(
             "Storing vectors & index. org_id=%s, account_token=%s",
             self.org_id,
             self.account_token,
         )
 
-        try:
-            ray_docs_index = VectorStoreIndex(
-                nodes=nodes, storage_context=self.storage_context
-            )
-        except Exception as e:
-            logger.error(
-                "org_id=%s, account_token=%s, error=%s",
-                self.org_id,
-                self.account_token,
-                str(e),
-            )
-            return False
+        ray_docs_index = VectorStoreIndex(
+            nodes=nodes, storage_context=self.storage_context
+        )
 
         # Store vector index id to organization
         dynamodb_service = DynamoDBService()
@@ -88,7 +74,7 @@ class DataIndexingService:
                 self.account_token,
                 e,
             )
-            return False
+            raise e
 
         timestamp = str(time.time())
 
@@ -109,9 +95,10 @@ class DataIndexingService:
                 self.account_token,
                 str(e),
             )
-            return False
-
-        return True
+            raise PrismDBException(
+                code=PrismDBExceptionCode.ITEM_UPDATE_ERROR,
+                message="Failed to append index id to organization",
+            )
 
     def load_vector_index(self) -> VectorStoreIndex:
         logger.info(

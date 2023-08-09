@@ -30,7 +30,6 @@ ENV COHERE_API_KEY=kNsAV8QbXudQYdNIWWyoNl8pujBPcqLtJvmGWhJJ
 ENV DYNAMODB_USER_TABLE=srv-prism-user
 ENV DYNAMODB_FILE_TABLE=srv-prism-file
 ENV DYNAMODB_ORGANIZATION_TABLE=srv-prism-organization
-ENV DYNAMODB_STORAGE_CONTEXT_TABLE=srv-prism-storage-context
 ENV DYNAMODB_WHITELIST_TABLE=srv-prism-whitelist
 
 ENV S3_FILE_BUCKET=srv-prism-file-store
