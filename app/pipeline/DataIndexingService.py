@@ -1,19 +1,15 @@
 import logging
-import time
 from collections.abc import Sequence
 
 import tiktoken
-from botocore.exceptions import ClientError
 from constants import (
     COHERE_API_KEY,
     DEFAULT_OPENAI_MODEL,
-    DYNAMODB_ORGANIZATION_TABLE,
     ZILLIZ_CLOUD_HOST,
     ZILLIZ_CLOUD_PASSWORD,
     ZILLIZ_CLOUD_PORT,
     ZILLIZ_CLOUD_USER,
 )
-from exceptions import PrismDBException, PrismDBExceptionCode
 from llama_index import (
     ServiceContext,
     StorageContext,
@@ -30,8 +26,6 @@ from llama_index.indices.postprocessor.cohere_rerank import CohereRerank
 from llama_index.llms import OpenAI
 from llama_index.schema import BaseNode
 from llama_index.vector_stores import MilvusVectorStore
-from models import get_organization_key, to_organization_model
-from storage import DynamoDBService
 
 logger = logging.getLogger(__name__)
 
@@ -62,43 +56,12 @@ class DataIndexingService:
             nodes=nodes, storage_context=self.storage_context
         )
 
-        # Store vector index id to organization
-        dynamodb_service = DynamoDBService()
-
-        try:
-            dynamodb_service.get_organization(self.org_id)
-        except PrismDBException as e:
-            logger.error(
-                "org_id=%s, account_token=%s, error=%s",
-                self.org_id,
-                self.account_token,
-                e,
-            )
-            raise e
-
-        timestamp = str(time.time())
-
-        try:
-            dynamodb_service.get_client().update_item(
-                TableName=DYNAMODB_ORGANIZATION_TABLE,
-                Key=get_organization_key(self.org_id),
-                UpdateExpression="SET index_id = :id, updated_at = :ua",
-                ExpressionAttributeValues={
-                    ":id": {"S": ray_docs_index.index_id},
-                    ":ua": {"S": timestamp},
-                },
-            )
-        except ClientError as e:
-            logger.error(
-                "org_id=%s, account_token=%s, error=%s",
-                self.org_id,
-                self.account_token,
-                str(e),
-            )
-            raise PrismDBException(
-                code=PrismDBExceptionCode.ITEM_UPDATE_ERROR,
-                message="Failed to append index id to organization",
-            )
+        logger.info(
+            "Stored index to vector store. org_id=%s, account_token=%s, index_id=%s",
+            self.org_id,
+            self.account_token,
+            ray_docs_index.index_id,
+        )
 
     def load_vector_index(self) -> VectorStoreIndex:
         logger.info(
@@ -106,17 +69,7 @@ class DataIndexingService:
             self.org_id,
         )
 
-        dynamodb_service = DynamoDBService()
-
-        response = dynamodb_service.get_organization(self.org_id)
-        org_item = to_organization_model(response)
-        vector_index_id = org_item.index_id
-
-        vector_index = load_index_from_storage(
-            storage_context=self.storage_context, index_id=vector_index_id
-        )
-
-        return vector_index
+        return load_index_from_storage(storage_context=self.storage_context)
 
     def generate_chat_engine(self, vector_index: VectorStoreIndex) -> BaseChatEngine:
         token_counter = TokenCountingHandler(

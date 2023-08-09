@@ -110,7 +110,6 @@ class DynamoDBService:
             "admin_id": {"S": org_admin_id},
             "user_list": {"L": [org_admin_id]},
             "invited_user_list": {"L": []},
-            "index_id": {"S": ""},
             "link_id_map": {"M": {}},
             "document_list": {"L": []},
             "created_at": {"S": timestamp},

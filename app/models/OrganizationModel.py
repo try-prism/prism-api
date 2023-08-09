@@ -7,7 +7,6 @@ class OrganizationModel(BaseModel):
     admin_id: str
     user_list: list[str]
     invited_user_list: list[str]
-    index_id: str
     link_id_map: dict
     document_list: list[str]
     created_at: str
@@ -23,7 +22,6 @@ def to_organization_model(response: dict) -> OrganizationModel:
         admin_id=item.get("admin_id", {"S": ""})["S"],
         user_list=item.get("user_list", {"L": []})["L"],
         invited_user_list=item.get("invited_user_list", {"L": []})["L"],
-        index_id=item.get("index_id", {"S": ""})["S"],
         link_id_map=item.get("link_id_map", {"M": {}})["M"],
         document_list=item.get("document_list", {"L": []})["L"],
         created_at=item.get("created_at", {"S": ""})["S"],
