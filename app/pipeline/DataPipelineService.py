@@ -12,7 +12,7 @@ from llama_index.schema import BaseNode, TextNode
 from merge.resources.filestorage.types import File
 from ray.data import ActorPoolStrategy, Dataset, from_items
 from ray.data.dataset import MaterializedDataset
-from storage import MergeService
+from storage import DynamoDBService, MergeService
 
 from .CustomUnstructuredReader import CustomUnstructuredReader
 from .EmbedNodes import EmbedNodes
@@ -21,10 +21,12 @@ logger = logging.getLogger(__name__)
 
 
 class DataPipelineService:
-    def __init__(self, account_token: str):
+    def __init__(self, org_id: str, account_token: str):
+        self.org_id = org_id
         self.account_token = account_token
         self.loader = CustomUnstructuredReader()
         self.parser = SimpleNodeParser()
+        self.dynamodb_service = DynamoDBService()
         self.merge_service = MergeService(account_token=account_token)
         current_date = datetime.datetime.now().date()
         self.process_date = str(
@@ -78,6 +80,9 @@ class DataPipelineService:
             "file_id": file_row["data"].id,
             "process_date": self.process_date,
         }
+        self.dynamodb_service.modify_organization_files(
+            org_id=self.org_id, file_id=file_row["data"].id, is_remove=False
+        )
         documents.extend(loaded_doc)
 
         return [{"doc": doc} for doc in documents]

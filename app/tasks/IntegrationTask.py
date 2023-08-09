@@ -34,7 +34,9 @@ def initiate_file_processing(
             status="INDEXING",
         )
 
-        data_pipeline_service = DataPipelineService(account_token=account_token)
+        data_pipeline_service = DataPipelineService(
+            org_id=integration_request.organization_id, account_token=account_token
+        )
         nodes = data_pipeline_service.get_embedded_nodes(file_list)
 
         data_indexing_service = DataIndexingService(

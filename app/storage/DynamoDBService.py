@@ -1,5 +1,6 @@
 import logging
 import time
+from typing import Any
 
 import boto3
 from botocore.exceptions import ClientError
@@ -84,7 +85,7 @@ class DynamoDBService:
         return retrieved
 
     def update_item(
-        self, table_name: str, key: dict, field_name: str, field_value: dict
+        self, table_name: str, key: dict, field_name: str, field_value: Any
     ) -> None:
         try:
             self.client.update_item(
@@ -305,11 +306,6 @@ class DynamoDBService:
             )
 
     def add_integration(self, org_id: str, account_token: str, status: str) -> None:
-        """
-        def update_item(
-            self, table_name: str, key: dict, field_name: str, field_value: dict
-        ) -> None:
-        """
         response = self.get_organization(org_id)
         org_item = to_organization_model(response)
 
@@ -328,4 +324,25 @@ class DynamoDBService:
             get_organization_key(org_id),
             field_name="link_id_map",
             field_value=link_id_map,
+        )
+
+    def modify_organization_files(
+        self, org_id: str, file_id: str, is_remove: bool
+    ) -> None:
+        response = self.get_organization(org_id)
+        org_item = to_organization_model(response)
+
+        document_list = org_item.document_list
+        if is_remove:
+            if file_id in document_list:
+                document_list.remove(file_id)
+        else:
+            if file_id not in document_list:
+                document_list.append(file_id)
+
+        self.update_item(
+            DYNAMODB_ORGANIZATION_TABLE,
+            get_organization_key(org_id),
+            field_name="document_list",
+            field_value=document_list,
         )

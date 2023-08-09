@@ -48,7 +48,7 @@ async def sync_organization_data(
     dynamodb_service = DynamoDBService()
     data_index_service = DataIndexingService(org_id=org_id)
     data_pipeline_service = DataPipelineService(
-        account_token=sync_request.account_token
+        org_id=org_id, account_token=sync_request.account_token
     )
 
     id_batches = {
@@ -72,7 +72,6 @@ async def sync_organization_data(
 
         # TODO: batch delete items that is FileOperation.DELETED from DYNAMODB_FILE_TABLE
         # TODO: batch put items that is FileOperation.CREATED into DYNAMODB_FILE_TABLE
-        # TODO: Also update those in organization table
 
         # Get files
         for batch in file_id_batch:
