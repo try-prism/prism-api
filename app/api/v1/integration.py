@@ -6,7 +6,7 @@ from botocore.exceptions import ClientError
 from constants import DYNAMODB_ORGANIZATION_TABLE
 from exceptions import PrismDBException, PrismException, PrismMergeException
 from fastapi import APIRouter, BackgroundTasks, Header
-from models import get_organization_key, to_organization_model
+from models import get_organization_key
 from models.RequestModels import IntegrationRequest
 from models.ResponseModels import (
     ErrorDTO,
@@ -110,15 +110,13 @@ async def get_integration_detail(
     # Retrieve organization's integration details
     dynamodb_service = DynamoDBService()
     try:
-        response = dynamodb_service.get_organization(org_id)
+        organization = dynamodb_service.get_organization(org_id)
     except PrismDBException as e:
         logger.error("org_id=%s, error=%s", org_id, e)
         return ErrorDTO(code=e.code, description=e.message)
 
-    org_item = to_organization_model(response)
-
     try:
-        link_id_map = org_item.link_id_map
+        link_id_map = organization.link_id_map
         logger.info("org_id=%s, link_id_map=%s", org_id, link_id_map)
         return IntegrationDetailResponse(
             status=HTTPStatus.OK.value, integrations=link_id_map
@@ -159,7 +157,7 @@ async def remove_integration_detail(
     # Remove organization's integration detail
     dynamodb_service = DynamoDBService()
     try:
-        response = dynamodb_service.get_organization(org_id)
+        organization = dynamodb_service.get_organization(org_id)
     except PrismDBException as e:
         logger.error(
             "org_id=%s, integration_account_token=%s, error=%s",
@@ -169,11 +167,10 @@ async def remove_integration_detail(
         )
         return ErrorDTO(code=e.code, description=e.message)
 
-    org_item = to_organization_model(response)
     timestamp = str(time.time())
 
     try:
-        link_id_map = org_item.link_id_map
+        link_id_map = organization.link_id_map
         logger.info("org_id=%s, link_id_map=%s", org_id, link_id_map)
         del link_id_map[integration_account_token]
 
@@ -221,12 +218,11 @@ async def generate_link_token(org_id: str):
     merge_service = MergeService()
 
     try:
-        response = dynamodb_service.get_organization(org_id)
-        org = to_organization_model(response)
+        organization = dynamodb_service.get_organization(org_id)
         link_token = merge_service.generate_link_token(
             org_id,
-            org.name,
-            org.email,
+            organization.name,
+            organization.email,
         )
     except PrismMergeException as e:
         logger.error("org_id=%s, error=%s", org_id, e)

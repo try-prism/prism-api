@@ -10,10 +10,14 @@ from constants import (
 )
 from exceptions import PrismDBException, PrismDBExceptionCode
 from models import (
+    OrganizationModel,
+    UserModel,
+    WhitelistModel,
     get_organization_key,
     get_user_key,
     to_organization_model,
     to_user_model,
+    to_whitelist_model,
 )
 
 logger = logging.getLogger(__name__)
@@ -119,11 +123,12 @@ class DynamoDBService:
 
         self.put_item(DYNAMODB_ORGANIZATION_TABLE, new_organization)
 
-    def get_organization(self, org_id: str) -> dict:
+    def get_organization(self, org_id: str) -> OrganizationModel:
         key = get_organization_key(org_id)
 
         try:
-            return self.get_item(DYNAMODB_ORGANIZATION_TABLE, key)
+            response = self.get_item(DYNAMODB_ORGANIZATION_TABLE, key)
+            return to_organization_model(response)
         except PrismDBException as e:
             e.message = "Could not find organization"
             raise e
@@ -173,9 +178,8 @@ class DynamoDBService:
     def modify_invited_users_list(
         self, org_id: str, org_user_id: str, is_remove: bool
     ) -> None:
-        response = self.get_organization(org_id)
-        org_item = to_organization_model(response)
-        invited_user_list = org_item.invited_user_list
+        organization = self.get_organization(org_id)
+        invited_user_list = organization.invited_user_list
 
         if is_remove:
             if org_user_id not in invited_user_list:
@@ -206,16 +210,15 @@ class DynamoDBService:
             e.message = f"Failed to {word} user to the invited user list"
             raise e
 
-    def get_whitelist_user_data(self, user_id: str) -> dict:
+    def get_whitelist_user_data(self, user_id: str) -> WhitelistModel:
         key = get_user_key(user_id)
 
         try:
             response = self.get_item(DYNAMODB_WHITELIST_TABLE, key)
+            return to_whitelist_model(response)
         except PrismDBException as e:
             e.message = "User is not invited to join"
             raise e
-
-        return response
 
     def register_user(
         self, id: str, email: str, name: str, organization_id: str
@@ -232,10 +235,8 @@ class DynamoDBService:
         }
 
         self.put_item(DYNAMODB_USER_TABLE, new_user)
-        org_response = self.get_organization(organization_id)
-
-        org_item = to_organization_model(org_response)
-        user_list = org_item.user_list
+        organization = self.get_organization(organization_id)
+        user_list = organization.user_list
         user_list.append(id)
 
         try:
@@ -249,37 +250,32 @@ class DynamoDBService:
             e.message = "Could not add user to organization"
             raise e
 
-    def get_user(self, user_id: str) -> dict:
+    def get_user(self, user_id: str) -> UserModel:
         try:
             response = self.get_item(DYNAMODB_USER_TABLE, get_user_key(user_id))
+            return to_user_model(response)
         except PrismDBException as e:
             e.message = "Could not find user"
             raise e
 
-        return response
-
     def remove_user(self, user_id: str, org_admin_id: str) -> dict:
-        response = self.get_user(user_id)
-        user_model = to_user_model(response)
-        org_response = self.get_organization(org_id=user_model.organization_id)
-        org_model = to_organization_model(org_response)
+        user = self.get_user(user_id)
+        organization = self.get_organization(org_id=user.organization_id)
 
-        if org_model.admin_id != org_admin_id:
+        if organization.admin_id != org_admin_id:
             raise PrismDBException(
                 code=PrismDBExceptionCode.NOT_ENOUGH_PERMISSION,
                 message="You don't have permission to remove user",
             )
 
         self.delete_item(DYNAMODB_USER_TABLE, get_user_key(user_id))
-        response = self.get_organization(user_model.organization_id)
-        org_item = to_organization_model(response)
-        user_list = org_item.user_list
+        user_list = organization.user_list
 
         if user_id in user_list:
             user_list.remove(user_id)
             self.update_item(
                 table_name=DYNAMODB_ORGANIZATION_TABLE,
-                key=get_organization_key(user_model.organization_id),
+                key=get_organization_key(user.organization_id),
                 field_name="user_list",
                 field_value={"L": user_list},
             )

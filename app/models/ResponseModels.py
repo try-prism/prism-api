@@ -68,4 +68,4 @@ class DeleteUserResponse(BaseModel):
 
 class GetInvitationResponse(BaseModel):
     status: int
-    invitation: WhitelistModel
+    whitelist_user: WhitelistModel

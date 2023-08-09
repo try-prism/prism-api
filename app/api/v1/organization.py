@@ -7,7 +7,7 @@ from botocore.exceptions import ClientError
 from constants import DYNAMODB_ORGANIZATION_TABLE
 from exceptions import PrismDBException, PrismException
 from fastapi import APIRouter
-from models import get_organization_key, to_organization_model
+from models import get_organization_key
 from models.RequestModels import (
     CancelInviteUserOrganizationRequest,
     InviteUserOrganizationRequest,
@@ -149,14 +149,14 @@ async def get_organization(
     dynamodb_service = DynamoDBService()
 
     try:
-        response = dynamodb_service.get_organization(org_id)
+        organization = dynamodb_service.get_organization(org_id)
     except PrismDBException as e:
         logger.error("org_id=%s, error=%s", org_id, e)
         return ErrorDTO(code=e.code, description=e.message)
 
     return GetOrganizationResponse(
         status=HTTPStatus.OK.value,
-        organization=to_organization_model(response),
+        organization=organization,
     )
 
 
@@ -191,15 +191,14 @@ async def update_organization(org_id: str, update_request: UpdateOrganizationReq
     dynamodb_service = DynamoDBService()
 
     try:
-        response = dynamodb_service.get_organization(org_id)
+        organization = dynamodb_service.get_organization(org_id)
     except PrismDBException as e:
         logger.error("org_id=%s, update_request=%s error=%s", org_id, update_request, e)
         return ErrorDTO(code=e.code, description=e.message)
 
-    org_item = to_organization_model(response)
     timestamp = str(time.time())
 
-    if org_item.admin_id != update_request.prev_organization_admin_id:
+    if organization.admin_id != update_request.prev_organization_admin_id:
         logger.error(
             "org_id=%s, update_request=%s error=no permission to edit this organization",
             org_id,

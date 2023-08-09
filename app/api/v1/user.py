@@ -3,7 +3,7 @@ from http import HTTPStatus
 
 from exceptions import PrismDBException, PrismException
 from fastapi import APIRouter, Header
-from models import to_user_model, to_whitelist_model
+from models import to_whitelist_model
 from models.RequestModels import (
     CancelInviteUserOrganizationRequest,
     RegisterUserRequest,
@@ -130,13 +130,14 @@ async def get_user(id: str):
     logger.info("id=%s", id)
 
     dynamodb_service = DynamoDBService()
+
     try:
-        response = dynamodb_service.get_user(user_id=id)
+        user = dynamodb_service.get_user(user_id=id)
     except PrismDBException as e:
         logger.error("id=%s, error=%s", id, e)
         return ErrorDTO(code=e.code, message=e.message)
 
-    return GetUserResponse(status=HTTPStatus.OK.value, user=to_user_model(response))
+    return GetUserResponse(status=HTTPStatus.OK.value, user=user)
 
 
 @router.delete(
@@ -191,13 +192,15 @@ async def get_invitation_data(id: str):
     logger.info("id=%s", id)
 
     dynamodb_service = DynamoDBService()
+
     try:
-        response = dynamodb_service.get_whitelist_user_data(user_id=id)
+        whitelist_user = dynamodb_service.get_whitelist_user_data(user_id=id)
     except PrismDBException as e:
         logger.error("id=%s, error=%s", id, e)
         return ErrorDTO(code=e.code, message=e.message)
 
-    whitelist_item = to_whitelist_model(response)
-    logger.info("id=%s, whitelist_item=%s", id, whitelist_item)
+    logger.info("id=%s, whitelist_item=%s", id, whitelist_user)
 
-    return GetInvitationResponse(status=HTTPStatus.OK.value, invitation=whitelist_item)
+    return GetInvitationResponse(
+        status=HTTPStatus.OK.value, whitelist_user=whitelist_user
+    )
