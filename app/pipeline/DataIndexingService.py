@@ -33,9 +33,8 @@ logger = logging.getLogger(__name__)
 
 
 class DataIndexingService:
-    def __init__(self, org_id: str, account_token: str | None = ""):
+    def __init__(self, org_id: str):
         self.org_id = org_id
-        self.account_token = account_token
         self.storage_context = StorageContext.from_defaults(
             vector_store=MilvusVectorStore(
                 collection_name=org_id,
@@ -48,28 +47,22 @@ class DataIndexingService:
         )
 
     def store_vectors(self, nodes: Sequence[BaseNode]) -> None:
-        logger.info(
-            "Storing vectors & index. org_id=%s, account_token=%s",
-            self.org_id,
-            self.account_token,
-        )
+        logger.info("Storing vectors & index. org_id=%s", self.org_id)
 
         vector_index = VectorStoreIndex(
             nodes=nodes, storage_context=self.storage_context
         )
 
         logger.info(
-            "Stored index to vector store. org_id=%s, account_token=%s, index_id=%s",
+            "Stored index to vector store. org_id=%s, index_id=%s",
             self.org_id,
-            self.account_token,
             vector_index.index_id,
         )
 
     def add_nodes(self, nodes: list[NodeWithEmbedding]) -> None:
         logger.info(
-            "Adding nodes. org_id=%s, account_token=%s, nodes=%s",
+            "Adding nodes. org_id=%s, nodes=%s",
             self.org_id,
-            self.account_token,
             nodes,
         )
 
@@ -77,25 +70,22 @@ class DataIndexingService:
             self.storage_context.vector_store.add(nodes)
         except MilvusException as e:
             logger.error(
-                "org_id=%s, account_token=%s, nodes=%s, error=%s",
+                "org_id=%s, nodes=%s, error=%s",
                 self.org_id,
-                self.account_token,
                 nodes,
                 e,
             )
 
         logger.info(
-            "Finished adding nodes. org_id=%s, account_token=%s, nodes=%s",
+            "Finished adding nodes. org_id=%s, nodes=%s",
             self.org_id,
-            self.account_token,
             nodes,
         )
 
     def delete_nodes(self, ref_doc_ids: list[str]) -> None:
         logger.info(
-            "Deleting nodes. org_id=%s, account_token=%s, ref_doc_ids=%s",
+            "Deleting nodes. org_id=%s, ref_doc_ids=%s",
             self.org_id,
-            self.account_token,
             ref_doc_ids,
         )
 
@@ -104,17 +94,15 @@ class DataIndexingService:
                 self.storage_context.vector_store.delete(ref_doc_id=ref_doc_id)
             except MilvusException as e:
                 logger.error(
-                    "org_id=%s, account_token=%s, ref_doc_id=%s, error=%s",
+                    "org_id=%s, ref_doc_id=%s, error=%s",
                     self.org_id,
-                    self.account_token,
                     ref_doc_id,
                     e,
                 )
 
         logger.info(
-            "Finished deleting nodes. org_id=%s, account_token=%s, ref_doc_ids=%s",
+            "Finished deleting nodes. org_id=%s, ref_doc_ids=%s",
             self.org_id,
-            self.account_token,
             ref_doc_ids,
         )
 

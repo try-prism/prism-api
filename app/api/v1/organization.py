@@ -7,7 +7,7 @@ from botocore.exceptions import ClientError
 from constants import DYNAMODB_ORGANIZATION_TABLE
 from exceptions import PrismDBException, PrismException
 from fastapi import APIRouter
-from models import get_organization_key, to_organization_model
+from models import get_organization_key
 from models.RequestModels import (
     CancelInviteUserOrganizationRequest,
     InviteUserOrganizationRequest,
@@ -31,14 +31,14 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 """
-| Endpoint                             | Description                           | Method |
-|--------------------------------------|---------------------------------------|--------|
-| `/organization`                      | Register a new organization           | POST   |
-| `/organization`                      | Delete an organization                | DELETE |
-| `/organization/{org_id}`             | Retrieve a organization's details     | GET    |
-| `/organization/{org_id}`             | Update a organization's admin id      | PATCH  |
-| `/organization/{org_id}/invite`      | Invite a user to a organization       | POST   |
-| `/organization/{org_id}/invite`      | Candel pending user invite            | DELETE |
+| Endpoint                             | Description                            | Method |
+|--------------------------------------|----------------------------------------|--------|
+| `/organization`                      | Register a new organization            | POST   |
+| `/organization`                      | Delete an organization                 | DELETE |
+| `/organization/{org_id}`             | Retrieve an organization's details     | GET    |
+| `/organization/{org_id}`             | Update an organization's admin id      | PATCH  |
+| `/organization/{org_id}/invite`      | Invite an user to a organization       | POST   |
+| `/organization/{org_id}/invite`      | Candel pending user invite             | DELETE |
 """
 
 
@@ -57,6 +57,7 @@ async def register_organization(
 ):
     if (
         not register_request.organization_name
+        or not register_request.organization_email
         or not register_request.organization_admin_id
     ):
         return ErrorDTO(
@@ -73,6 +74,7 @@ async def register_organization(
         dynamodb_service.register_organization(
             org_id=org_id,
             org_name=register_request.organization_name,
+            org_email=register_request.organization_email,
             org_admin_id=register_request.organization_admin_id,
         )
     except PrismDBException as e:
@@ -125,7 +127,7 @@ async def remove_organization(
 
 @router.get(
     "/organization/{org_id}",
-    summary="Retrieve a organization's details",
+    summary="Retrieve an organization's details",
     tags=["Organization"],
     response_model=GetOrganizationResponse,
     responses={
@@ -147,20 +149,20 @@ async def get_organization(
     dynamodb_service = DynamoDBService()
 
     try:
-        response = dynamodb_service.get_organization(org_id)
+        organization = dynamodb_service.get_organization(org_id)
     except PrismDBException as e:
         logger.error("org_id=%s, error=%s", org_id, e)
         return ErrorDTO(code=e.code, description=e.message)
 
     return GetOrganizationResponse(
         status=HTTPStatus.OK.value,
-        organization=to_organization_model(response),
+        organization=organization,
     )
 
 
 @router.patch(
     "/organization/{org_id}",
-    summary="Update a organization's admin id",
+    summary="Update an organization's admin id",
     tags=["Organization"],
     response_model=UpdateOrganizationResponse,
     responses={
@@ -189,15 +191,14 @@ async def update_organization(org_id: str, update_request: UpdateOrganizationReq
     dynamodb_service = DynamoDBService()
 
     try:
-        response = dynamodb_service.get_organization(org_id)
+        organization = dynamodb_service.get_organization(org_id)
     except PrismDBException as e:
         logger.error("org_id=%s, update_request=%s error=%s", org_id, update_request, e)
         return ErrorDTO(code=e.code, description=e.message)
 
-    org_item = to_organization_model(response)
     timestamp = str(time.time())
 
-    if org_item.admin_id != update_request.prev_organization_admin_id:
+    if organization.admin_id != update_request.prev_organization_admin_id:
         logger.error(
             "org_id=%s, update_request=%s error=no permission to edit this organization",
             org_id,
@@ -230,7 +231,7 @@ async def update_organization(org_id: str, update_request: UpdateOrganizationReq
 
 @router.post(
     "/organization/{org_id}/invite",
-    summary="Invite a user to a organization",
+    summary="Invite an user to a organization",
     tags=["Organization"],
     response_model=InviteUserOrganizationResponse,
     responses={

@@ -38,7 +38,7 @@ def initiate_file_processing(
         nodes = data_pipeline_service.get_embedded_nodes(file_list)
 
         data_indexing_service = DataIndexingService(
-            org_id=integration_request.organization_id, account_token=account_token
+            org_id=integration_request.organization_id
         )
         data_indexing_service.store_vectors(nodes)
     except Exception as e:

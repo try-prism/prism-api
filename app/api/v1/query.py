@@ -3,7 +3,6 @@ import logging
 from connection import ConnectionManager
 from exceptions import PrismDBException, PrismDBExceptionCode
 from fastapi import APIRouter, Header, WebSocket, WebSocketDisconnect
-from models import to_organization_model
 from pipeline import DataIndexingService
 from storage import DynamoDBService
 
@@ -25,10 +24,9 @@ async def query(websocket: WebSocket, org_id: str = Header(), user_id: str = Hea
 
     try:
         # Check whether the user belongs to the organization
-        response = dynamodb_service.get_organization(org_id)
-        org_model = to_organization_model(response)
+        organization = dynamodb_service.get_organization(org_id)
 
-        if user_id not in org_model.user_list:
+        if user_id not in organization.user_list:
             raise PrismDBException(
                 code=PrismDBExceptionCode.USER_DOES_NOT_EXIST,
                 message="User doesn't belong to this organization",
