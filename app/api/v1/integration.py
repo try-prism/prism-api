@@ -7,7 +7,7 @@ from constants import DYNAMODB_ORGANIZATION_TABLE
 from exceptions import PrismDBException, PrismException, PrismMergeException
 from fastapi import APIRouter, BackgroundTasks, Header
 from models import get_organization_key, to_organization_model
-from models.RequestModels import GenerateLinkTokenRequest, IntegrationRequest
+from models.RequestModels import IntegrationRequest
 from models.ResponseModels import (
     ErrorDTO,
     GenerateLinkTokenResponse,
@@ -22,53 +22,13 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 """
-| Endpoint                      | Description                          | Method |
-|-------------------------------|--------------------------------------|--------|
-| `/integration`                | Add a new cloud storage integration  | POST   |
-| `/integration/{org_id}`       | Retrieve integration details         | GET    |
-| `/integration/{org_id}`       | Remove a cloud storage integration   | DELETE |
-| `/generate-link-token`        | Generate link token for integration  | POST   |
+| Endpoint                           | Description                          | Method |
+|------------------------------------|--------------------------------------|--------|
+| `/integration`                     | Add a new cloud storage integration  | POST   |
+| `/integration/{org_id}`            | Retrieve integration details         | GET    |
+| `/integration/{org_id}`            | Remove a cloud storage integration   | DELETE |
+| `/integration/{org_id}/generate`   | Generate link token for integration  | GET    |
 """
-
-
-@router.post(
-    "/generate-link-token",
-    summary="Generate link token for integration",
-    tags=["Integration"],
-    response_model=GenerateLinkTokenResponse,
-    responses={
-        200: {"model": GenerateLinkTokenResponse, "description": "OK"},
-        400: {"model": ErrorDTO, "description": "Error: Bad request"},
-    },
-)
-async def generate_link_token(
-    generate_request: GenerateLinkTokenRequest,
-):
-    if (
-        not generate_request.organization_id
-        or not generate_request.organization_name
-        or not generate_request.email_address
-    ):
-        return ErrorDTO(
-            code=HTTPStatus.BAD_REQUEST.value,
-            description="Invalid GenerateLinkTokenRequest",
-        )
-
-    logger.info(generate_request)
-
-    merge_service = MergeService()
-    try:
-        link_token = merge_service.generate_link_token(
-            generate_request.organization_id,
-            generate_request.organization_name,
-            generate_request.email_address,
-        )
-    except PrismMergeException as e:
-        logger.error("generate_request=%s, error=%s", generate_request, e)
-        return ErrorDTO(code=e.code, message=e.message)
-
-    logger.info("generate_request=%s, link_token=%s", generate_request, link_token)
-    return GenerateLinkTokenResponse(status=HTTPStatus.OK.value, link_token=link_token)
 
 
 @router.post(
@@ -236,3 +196,45 @@ async def remove_integration_detail(
     # TODO: Remove data related to this integration
 
     return IntegrationRemoveResponse(status=HTTPStatus.OK.value)
+
+
+@router.get(
+    "/integration/{org_id}/generate",
+    summary="Generate link token for integration",
+    tags=["Integration"],
+    response_model=GenerateLinkTokenResponse,
+    responses={
+        200: {"model": GenerateLinkTokenResponse, "description": "OK"},
+        400: {"model": ErrorDTO, "description": "Error: Bad request"},
+    },
+)
+async def generate_link_token(org_id: str):
+    if not org_id:
+        return ErrorDTO(
+            code=HTTPStatus.BAD_REQUEST.value,
+            description="Invalid GenerateLinkTokenRequest",
+        )
+
+    logger.info("org_id=%s", org_id)
+
+    dynamodb_service = DynamoDBService()
+    merge_service = MergeService()
+
+    try:
+        response = dynamodb_service.get_organization(org_id)
+        org = to_organization_model(response)
+        link_token = merge_service.generate_link_token(
+            org_id,
+            org.name,
+            org.email,
+        )
+    except PrismMergeException as e:
+        logger.error("org_id=%s, error=%s", org_id, e)
+        return ErrorDTO(code=e.code, message=e.message)
+
+    logger.info(
+        "org_id=%s, link_token=%s",
+        org_id,
+        link_token,
+    )
+    return GenerateLinkTokenResponse(status=HTTPStatus.OK.value, link_token=link_token)

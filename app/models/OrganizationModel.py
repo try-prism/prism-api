@@ -4,6 +4,7 @@ from pydantic import BaseModel
 class OrganizationModel(BaseModel):
     id: str
     name: str
+    email: str
     admin_id: str
     user_list: list[str]
     invited_user_list: list[str]
@@ -19,6 +20,7 @@ def to_organization_model(response: dict) -> OrganizationModel:
     return OrganizationModel(
         id=item.get("id", {"S": ""})["S"],
         name=item.get("name", {"S": ""})["S"],
+        email=item.get("email", {"S": ""})["S"],
         admin_id=item.get("admin_id", {"S": ""})["S"],
         user_list=item.get("user_list", {"L": []})["L"],
         invited_user_list=item.get("invited_user_list", {"L": []})["L"],

@@ -101,12 +101,13 @@ class DynamoDBService:
         return response
 
     def register_organization(
-        self, org_id: str, org_name: str, org_admin_id: str
+        self, org_id: str, org_name: str, org_email: str, org_admin_id: str
     ) -> None:
         timestamp = str(time.time())
         new_organization = {
             "id": {"S": org_id},
             "name": {"S": org_name},
+            "email": {"S": org_email},
             "admin_id": {"S": org_admin_id},
             "user_list": {"L": [org_admin_id]},
             "invited_user_list": {"L": []},

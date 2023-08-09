@@ -57,6 +57,7 @@ async def register_organization(
 ):
     if (
         not register_request.organization_name
+        or not register_request.organization_email
         or not register_request.organization_admin_id
     ):
         return ErrorDTO(
@@ -73,6 +74,7 @@ async def register_organization(
         dynamodb_service.register_organization(
             org_id=org_id,
             org_name=register_request.organization_name,
+            org_email=register_request.organization_email,
             org_admin_id=register_request.organization_admin_id,
         )
     except PrismDBException as e:
