@@ -121,7 +121,6 @@ async def get_integration_detail(
         return IntegrationDetailResponse(
             status=HTTPStatus.OK.value, integrations=link_id_map
         )
-
     except ClientError as e:
         logger.error(str(e))
         return ErrorDTO(

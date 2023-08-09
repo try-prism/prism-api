@@ -31,14 +31,14 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 """
-| Endpoint                             | Description                           | Method |
-|--------------------------------------|---------------------------------------|--------|
-| `/organization`                      | Register a new organization           | POST   |
-| `/organization`                      | Delete an organization                | DELETE |
-| `/organization/{org_id}`             | Retrieve a organization's details     | GET    |
-| `/organization/{org_id}`             | Update a organization's admin id      | PATCH  |
-| `/organization/{org_id}/invite`      | Invite a user to a organization       | POST   |
-| `/organization/{org_id}/invite`      | Candel pending user invite            | DELETE |
+| Endpoint                             | Description                            | Method |
+|--------------------------------------|----------------------------------------|--------|
+| `/organization`                      | Register a new organization            | POST   |
+| `/organization`                      | Delete an organization                 | DELETE |
+| `/organization/{org_id}`             | Retrieve an organization's details     | GET    |
+| `/organization/{org_id}`             | Update an organization's admin id      | PATCH  |
+| `/organization/{org_id}/invite`      | Invite an user to a organization       | POST   |
+| `/organization/{org_id}/invite`      | Candel pending user invite             | DELETE |
 """
 
 
@@ -127,7 +127,7 @@ async def remove_organization(
 
 @router.get(
     "/organization/{org_id}",
-    summary="Retrieve a organization's details",
+    summary="Retrieve an organization's details",
     tags=["Organization"],
     response_model=GetOrganizationResponse,
     responses={
@@ -162,7 +162,7 @@ async def get_organization(
 
 @router.patch(
     "/organization/{org_id}",
-    summary="Update a organization's admin id",
+    summary="Update an organization's admin id",
     tags=["Organization"],
     response_model=UpdateOrganizationResponse,
     responses={
@@ -231,7 +231,7 @@ async def update_organization(org_id: str, update_request: UpdateOrganizationReq
 
 @router.post(
     "/organization/{org_id}/invite",
-    summary="Invite a user to a organization",
+    summary="Invite an user to a organization",
     tags=["Organization"],
     response_model=InviteUserOrganizationResponse,
     responses={
