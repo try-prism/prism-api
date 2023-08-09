@@ -1,20 +1,15 @@
 import logging
-import time
 from collections.abc import Sequence
 
 import tiktoken
-from botocore.exceptions import ClientError
 from constants import (
     COHERE_API_KEY,
     DEFAULT_OPENAI_MODEL,
-    DYNAMODB_ORGANIZATION_TABLE,
-    DYNAMODB_STORAGE_CONTEXT_TABLE,
     ZILLIZ_CLOUD_HOST,
     ZILLIZ_CLOUD_PASSWORD,
     ZILLIZ_CLOUD_PORT,
     ZILLIZ_CLOUD_USER,
 )
-from exceptions import PrismDBException
 from llama_index import (
     ServiceContext,
     StorageContext,
@@ -23,17 +18,16 @@ from llama_index import (
 )
 from llama_index.callbacks import CallbackManager, TokenCountingHandler
 from llama_index.chat_engine.types import BaseChatEngine, ChatMode
-from llama_index.indices.postprocessor import (  # FixedRecencyPostprocessor,
+from llama_index.indices.postprocessor import (
+    FixedRecencyPostprocessor,
     SentenceEmbeddingOptimizer,
 )
 from llama_index.indices.postprocessor.cohere_rerank import CohereRerank
 from llama_index.llms import OpenAI
 from llama_index.schema import BaseNode
-from llama_index.storage.docstore.dynamodb_docstore import DynamoDBDocumentStore
-from llama_index.storage.index_store.dynamodb_index_store import DynamoDBIndexStore
 from llama_index.vector_stores import MilvusVectorStore
-from models import get_organization_key, to_organization_model
-from storage import DynamoDBService
+from llama_index.vector_stores.types import NodeWithEmbedding
+from pymilvus import MilvusException
 
 logger = logging.getLogger(__name__)
 
@@ -43,12 +37,6 @@ class DataIndexingService:
         self.org_id = org_id
         self.account_token = account_token
         self.storage_context = StorageContext.from_defaults(
-            docstore=DynamoDBDocumentStore.from_table_name(
-                table_name=DYNAMODB_STORAGE_CONTEXT_TABLE, namespace=org_id
-            ),
-            index_store=DynamoDBIndexStore.from_table_name(
-                table_name=DYNAMODB_STORAGE_CONTEXT_TABLE, namespace=org_id
-            ),
             vector_store=MilvusVectorStore(
                 collection_name=org_id,
                 host=ZILLIZ_CLOUD_HOST,
@@ -59,82 +47,76 @@ class DataIndexingService:
             ),
         )
 
-    def store_docs_to_docstore(self, nodes: Sequence[BaseNode]) -> bool:
-        logger.info(
-            "Storing docs to docstore. org_id=%s, account_token=%s",
-            self.org_id,
-            self.account_token,
-        )
-
-        try:
-            self.storage_context.docstore.add_documents(nodes)
-        except Exception as e:
-            logger.error(
-                "org_id=%s, account_token=%s, error=%s",
-                self.org_id,
-                self.account_token,
-                str(e),
-            )
-            return False
-
-        return True
-
-    def store_vectors(self, nodes: Sequence[BaseNode]) -> bool:
+    def store_vectors(self, nodes: Sequence[BaseNode]) -> None:
         logger.info(
             "Storing vectors & index. org_id=%s, account_token=%s",
             self.org_id,
             self.account_token,
         )
 
+        vector_index = VectorStoreIndex(
+            nodes=nodes, storage_context=self.storage_context
+        )
+
+        logger.info(
+            "Stored index to vector store. org_id=%s, account_token=%s, index_id=%s",
+            self.org_id,
+            self.account_token,
+            vector_index.index_id,
+        )
+
+    def add_nodes(self, nodes: list[NodeWithEmbedding]) -> None:
+        logger.info(
+            "Adding nodes. org_id=%s, account_token=%s, nodes=%s",
+            self.org_id,
+            self.account_token,
+            nodes,
+        )
+
         try:
-            ray_docs_index = VectorStoreIndex(
-                nodes=nodes, storage_context=self.storage_context
-            )
-        except Exception as e:
+            self.storage_context.vector_store.add(nodes)
+        except MilvusException as e:
             logger.error(
-                "org_id=%s, account_token=%s, error=%s",
+                "org_id=%s, account_token=%s, nodes=%s, error=%s",
                 self.org_id,
                 self.account_token,
-                str(e),
-            )
-            return False
-
-        # Store vector index id to organization
-        dynamodb_service = DynamoDBService()
-
-        try:
-            dynamodb_service.get_organization(self.org_id)
-        except PrismDBException as e:
-            logger.error(
-                "org_id=%s, account_token=%s, error=%s",
-                self.org_id,
-                self.account_token,
+                nodes,
                 e,
             )
-            return False
 
-        timestamp = str(time.time())
+        logger.info(
+            "Finished adding nodes. org_id=%s, account_token=%s, nodes=%s",
+            self.org_id,
+            self.account_token,
+            nodes,
+        )
 
-        try:
-            dynamodb_service.get_client().update_item(
-                TableName=DYNAMODB_ORGANIZATION_TABLE,
-                Key=get_organization_key(self.org_id),
-                UpdateExpression="SET index_id = :id, updated_at = :ua",
-                ExpressionAttributeValues={
-                    ":id": {"S": ray_docs_index.index_id},
-                    ":ua": {"S": timestamp},
-                },
-            )
-        except ClientError as e:
-            logger.error(
-                "org_id=%s, account_token=%s, error=%s",
-                self.org_id,
-                self.account_token,
-                str(e),
-            )
-            return False
+    def delete_nodes(self, ref_doc_ids: list[str]) -> None:
+        logger.info(
+            "Deleting nodes. org_id=%s, account_token=%s, ref_doc_ids=%s",
+            self.org_id,
+            self.account_token,
+            ref_doc_ids,
+        )
 
-        return True
+        for ref_doc_id in ref_doc_ids:
+            try:
+                self.storage_context.vector_store.delete(ref_doc_id=ref_doc_id)
+            except MilvusException as e:
+                logger.error(
+                    "org_id=%s, account_token=%s, ref_doc_id=%s, error=%s",
+                    self.org_id,
+                    self.account_token,
+                    ref_doc_id,
+                    e,
+                )
+
+        logger.info(
+            "Finished deleting nodes. org_id=%s, account_token=%s, ref_doc_ids=%s",
+            self.org_id,
+            self.account_token,
+            ref_doc_ids,
+        )
 
     def load_vector_index(self) -> VectorStoreIndex:
         logger.info(
@@ -142,17 +124,7 @@ class DataIndexingService:
             self.org_id,
         )
 
-        dynamodb_service = DynamoDBService()
-
-        response = dynamodb_service.get_organization(self.org_id)
-        org_item = to_organization_model(response)
-        vector_index_id = org_item.index_id
-
-        vector_index = load_index_from_storage(
-            storage_context=self.storage_context, index_id=vector_index_id
-        )
-
-        return vector_index
+        return load_index_from_storage(storage_context=self.storage_context)
 
     def generate_chat_engine(self, vector_index: VectorStoreIndex) -> BaseChatEngine:
         token_counter = TokenCountingHandler(
@@ -170,15 +142,11 @@ class DataIndexingService:
             callback_manager=CallbackManager([token_counter]),
         )
 
-        """
-        Commented out for now because we should determine how to apply this
-        It will depend on the use case
-
-        prioritize most recent information in the results
+        # prioritize most recent information in the results
         fixed_recency_postprocessor = FixedRecencyPostprocessor(
-            tok_k=5, date_key="date"  # the key in the metadata to find the date
+            tok_k=5, date_key="process_date"  # the key in the metadata to find the date
         )
-        """
+
         # re-order nodes, and returns the top N nodes
         cohere_rerank_postprocessor = CohereRerank(
             api_key=COHERE_API_KEY, top_n=self.top_k
@@ -194,7 +162,7 @@ class DataIndexingService:
             chat_mode=ChatMode.REACT,
             node_postprocessors=[
                 cohere_rerank_postprocessor,
-                # fixed_recency_postprocessor,
+                fixed_recency_postprocessor,
                 sentence_embedding_postprocessor,
             ],
         )

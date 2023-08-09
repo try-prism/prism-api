@@ -1,3 +1,4 @@
+import datetime
 import logging
 from collections.abc import Sequence
 from typing import IO
@@ -25,6 +26,10 @@ class DataPipelineService:
         self.loader = CustomUnstructuredReader()
         self.parser = SimpleNodeParser()
         self.merge_service = MergeService(account_token=account_token)
+        current_date = datetime.datetime.now().date()
+        self.process_date = str(
+            datetime.datetime(current_date.year, current_date.month, current_date.day)
+        )
 
         if not ray.is_initialized():
             logger.info("Connecting to the ray cluster. ENV=%s", PRISM_ENV)
@@ -51,9 +56,9 @@ class DataPipelineService:
     def get_embedded_nodes(self, all_files: list[File]) -> Sequence[BaseNode]:
         loaded_docs = self.load_data(all_files)
         nodes = self.generate_nodes(loaded_docs)
-        ray_docs_nodes = self.generate_embeddings(nodes)
+        embeddings = self.generate_embeddings(nodes)
 
-        return ray_docs_nodes
+        return embeddings
 
     def load_and_parse_files(
         self, file_row: dict[str, File]
@@ -68,7 +73,11 @@ class DataPipelineService:
             logger.error("file_row=%s, error=%s", file_row, e)
 
         loaded_doc = self.loader.load_data(file=file_in_bytes, split_documents=False)
-        loaded_doc[0].extra_info = {"file_id": file_row["data"].id}
+        loaded_doc[0].doc_id = file_row["data"].id
+        loaded_doc[0].metadata = {
+            "file_id": file_row["data"].id,
+            "process_date": self.process_date,
+        }
         documents.extend(loaded_doc)
 
         return [{"doc": doc} for doc in documents]
@@ -125,11 +134,11 @@ class DataPipelineService:
         )
 
         # Trigger execution and collect all the embedded nodes.
-        ray_docs_nodes = []
+        embeddings = []
 
         for row in embedded_nodes.iter_rows():
             node = row["embedded_nodes"]
             assert node.embedding is not None
-            ray_docs_nodes.append(node)
+            embeddings.append(node)
 
-        return ray_docs_nodes
+        return embeddings

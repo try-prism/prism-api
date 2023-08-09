@@ -14,6 +14,8 @@ class PrismDBExceptionCode(Enum):
 
     NOT_ENOUGH_PERMISSION = 4201
 
+    VECTOR_STORE_FAILURE = 4301
+
 
 class PrismDBException(PrismException):
     def __init__(self, code: PrismDBExceptionCode, message: str):

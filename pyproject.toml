@@ -13,6 +13,7 @@ fastapi = "^0.100.1"
 langchain = {extras = ["llms"], version = "^0.0.251"}
 llama-index = "^0.7.19"
 mergepythonclient = "^0.2.1"
+pymilvus = "^2.2.14"
 python = "^3.10"
 python-dotenv = "^1.0.0"
 ray = {extras = ["default"], version = "^2.6.2"}

@@ -1,6 +1,7 @@
 """Set of constants."""
 import os
 
+import openai
 from dotenv import load_dotenv
 from ray.runtime_env import RuntimeEnv
 
@@ -18,6 +19,9 @@ AWS_SECRET_ACCESS_KEY = os.environ["AWS_SECRET_ACCESS_KEY"]
 MERGE_API_KEY = os.environ["MERGE_API_KEY"]
 COHERE_API_KEY = os.environ["COHERE_API_KEY"]
 
+# Need to set this to not get RetryError for now
+openai.api_key = os.getenv("OPENAI_API_KEY")
+
 
 # Model
 DEFAULT_OPENAI_MODEL = os.environ["DEFAULT_OPENAI_MODEL"]
@@ -27,7 +31,6 @@ DEFAULT_OPENAI_MODEL = os.environ["DEFAULT_OPENAI_MODEL"]
 DYNAMODB_USER_TABLE = os.environ["DYNAMODB_USER_TABLE"]
 DYNAMODB_FILE_TABLE = os.environ["DYNAMODB_FILE_TABLE"]
 DYNAMODB_ORGANIZATION_TABLE = os.environ["DYNAMODB_ORGANIZATION_TABLE"]
-DYNAMODB_STORAGE_CONTEXT_TABLE = os.environ["DYNAMODB_STORAGE_CONTEXT_TABLE"]
 DYNAMODB_WHITELIST_TABLE = os.environ["DYNAMODB_WHITELIST_TABLE"]
 
 
