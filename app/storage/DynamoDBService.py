@@ -64,6 +64,25 @@ class DynamoDBService:
 
         return response
 
+    def batch_get_item(
+        self, table_name: str, field_name: str, field_values: list[str]
+    ) -> dict:
+        key = {table_name: {"Keys": [{field_name: item} for item in field_values]}}
+        response = self.client.batch_get_item(RequestItems=key)
+
+        if "Responses" not in response:
+            raise PrismDBException(
+                code=PrismDBExceptionCode.ITEM_BATCH_GET_ERROR,
+                message="Failed to get items from table",
+            )
+
+        retrieved = {}
+
+        for key in response["Responses"]:
+            retrieved[key] += response["Responses"][key]
+
+        return retrieved
+
     def update_item(
         self, table_name: str, key: dict, field_name: str, field_value: dict
     ) -> None:
@@ -131,7 +150,7 @@ class DynamoDBService:
             return to_organization_model(response)
         except PrismDBException as e:
             e.message = "Could not find organization"
-            raise e
+            raise
 
     def remove_organization(self, org_id: str, org_admin_id: str) -> dict:
         key = get_organization_key(org_id)
@@ -140,7 +159,7 @@ class DynamoDBService:
             response = self.get_item(DYNAMODB_ORGANIZATION_TABLE, key)
         except PrismDBException as e:
             e.message = "Could not find organization"
-            raise e
+            raise
 
         org_item = to_organization_model(response)
 
@@ -173,7 +192,7 @@ class DynamoDBService:
         except PrismDBException as e:
             word = "remove" if is_remove else "add"
             e.message = f"Failed to {word} user to the whitelist"
-            raise e
+            raise
 
     def modify_invited_users_list(
         self, org_id: str, org_user_id: str, is_remove: bool
@@ -208,7 +227,7 @@ class DynamoDBService:
         except PrismDBException as e:
             word = "remove" if is_remove else "add"
             e.message = f"Failed to {word} user to the invited user list"
-            raise e
+            raise
 
     def get_whitelist_user_data(self, user_id: str) -> WhitelistModel:
         key = get_user_key(user_id)
@@ -218,7 +237,7 @@ class DynamoDBService:
             return to_whitelist_model(response)
         except PrismDBException as e:
             e.message = "User is not invited to join"
-            raise e
+            raise
 
     def register_user(
         self, id: str, email: str, name: str, organization_id: str
@@ -248,7 +267,7 @@ class DynamoDBService:
             )
         except PrismDBException as e:
             e.message = "Could not add user to organization"
-            raise e
+            raise
 
     def get_user(self, user_id: str) -> UserModel:
         try:
@@ -256,7 +275,7 @@ class DynamoDBService:
             return to_user_model(response)
         except PrismDBException as e:
             e.message = "Could not find user"
-            raise e
+            raise
 
     def remove_user(self, user_id: str, org_admin_id: str) -> dict:
         user = self.get_user(user_id)

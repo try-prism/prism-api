@@ -41,4 +41,5 @@ class RegisterUserRequest(BaseModel):
 
 
 class SyncOrganizationDataRequest(BaseModel):
+    account_token: str
     file_ids: list[str]

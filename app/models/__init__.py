@@ -1,4 +1,5 @@
 from .AccessControlModel import AccessControlModel, to_access_control_model
+from .FileModel import to_file_model
 from .OrganizationModel import (
     OrganizationModel,
     get_organization_key,
@@ -16,6 +17,7 @@ __all__ = [
     "to_organization_model",
     "to_user_model",
     "to_whitelist_model",
+    "to_file_model",
     "get_organization_key",
     "get_user_key",
 ]

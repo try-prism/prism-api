@@ -1,10 +1,16 @@
 import logging
 from http import HTTPStatus
 
-from exceptions import PrismDBException
+from constants import DYNAMODB_FILE_TABLE
+from exceptions import PrismException
 from fastapi import APIRouter
+from merge.resources.filestorage.types import File
+from models import to_file_model
 from models.RequestModels import SyncOrganizationDataRequest
 from models.ResponseModels import ErrorDTO, SyncOrganizationDataResponse
+from pipeline import DataIndexingService, DataPipelineService
+from storage import DynamoDBService
+from utils import divide_list
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -30,18 +36,38 @@ async def sync_organization_data(
     org_id: str,
     sync_request: SyncOrganizationDataRequest,
 ):
-    if not sync_request.file_ids:
+    if not sync_request.account_token or not sync_request.file_ids:
         return ErrorDTO(
             code=HTTPStatus.BAD_REQUEST.value,
-            description="Invalid RegisterOrganizationRequest",
+            description="Invalid SyncOrganizationDataRequest",
         )
 
     logger.info("sync_request=%s, org_id=%s", sync_request, org_id)
 
+    dynamodb_service = DynamoDBService()
+    data_index_service = DataIndexingService(org_id=org_id)
+    data_pipeline_service = DataPipelineService(
+        account_token=sync_request.account_token
+    )
+
+    file_id_batch: list[str] = divide_list(sync_request.file_ids, 50)
+    files: list[File] = []
+
     try:
-        # TODO: Implement deleting from vector store and adding to vector store
-        pass
-    except PrismDBException as e:
+        # Remove old data nodes
+        data_index_service.delete_nodes(sync_request.file_ids)
+
+        # Get files
+        for batch in file_id_batch:
+            batch_data = dynamodb_service.batch_get_item(
+                DYNAMODB_FILE_TABLE, "id", batch
+            )
+            files.extend([to_file_model(i) for i in batch_data])
+
+        # Generate & add new data nodes
+        nodes = data_pipeline_service.get_embedded_nodes(all_files=files)
+        data_index_service.add_nodes(nodes)
+    except PrismException as e:
         logger.error("sync_request=%s, error=%s", sync_request, e)
         return ErrorDTO(
             code=e.code,
