@@ -1,6 +1,7 @@
 """Set of constants."""
 import os
 
+import openai
 from dotenv import load_dotenv
 from ray.runtime_env import RuntimeEnv
 
@@ -17,6 +18,9 @@ AWS_ACCESS_KEY_ID = os.environ["AWS_ACCESS_KEY_ID"]
 AWS_SECRET_ACCESS_KEY = os.environ["AWS_SECRET_ACCESS_KEY"]
 MERGE_API_KEY = os.environ["MERGE_API_KEY"]
 COHERE_API_KEY = os.environ["COHERE_API_KEY"]
+
+# Need to set this to not get RetryError for now
+openai.api_key = os.getenv("OPENAI_API_KEY")
 
 
 # Model

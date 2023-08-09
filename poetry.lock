@@ -2509,13 +2509,13 @@ test = ["coverage", "pytest", "pytest-cov"]
 
 [[package]]
 name = "llama-index"
-version = "0.7.19"
+version = "0.7.22"
 description = "Interface between LLMs and your data"
 optional = false
 python-versions = "*"
 files = [
-    {file = "llama_index-0.7.19-py3-none-any.whl", hash = "sha256:01634715dcaa72ff2b29fc46a51ea9df5763d1a0552d0e4f0750984817d49087"},
-    {file = "llama_index-0.7.19.tar.gz", hash = "sha256:6e9d1ab62e8e83185b3163b3ac1dd578bfe8830ac67f35fa97dd65b3d8b8345c"},
+    {file = "llama_index-0.7.22-py3-none-any.whl", hash = "sha256:7140ea20f398d7acdd5922b322c720d14052dace621c1a672907f1f9eb173356"},
+    {file = "llama_index-0.7.22.tar.gz", hash = "sha256:e3f44bc1a94bbc0bb4cbe5c9d1864f74c7394c5d11c83a610a82d040f0254839"},
 ]
 
 [package.dependencies]

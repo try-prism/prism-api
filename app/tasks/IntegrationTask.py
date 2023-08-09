@@ -40,7 +40,6 @@ def initiate_file_processing(
         data_indexing_service = DataIndexingService(
             org_id=integration_request.organization_id, account_token=account_token
         )
-        data_indexing_service.store_docs_to_docstore(nodes)
         data_indexing_service.store_vectors(nodes)
     except Exception as e:
         logging.error(

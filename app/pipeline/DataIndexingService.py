@@ -23,13 +23,13 @@ from llama_index import (
 )
 from llama_index.callbacks import CallbackManager, TokenCountingHandler
 from llama_index.chat_engine.types import BaseChatEngine, ChatMode
-from llama_index.indices.postprocessor import (  # FixedRecencyPostprocessor,
+from llama_index.indices.postprocessor import (
+    FixedRecencyPostprocessor,
     SentenceEmbeddingOptimizer,
 )
 from llama_index.indices.postprocessor.cohere_rerank import CohereRerank
 from llama_index.llms import OpenAI
 from llama_index.schema import BaseNode
-from llama_index.storage.docstore.dynamodb_docstore import DynamoDBDocumentStore
 from llama_index.storage.index_store.dynamodb_index_store import DynamoDBIndexStore
 from llama_index.vector_stores import MilvusVectorStore
 from models import get_organization_key, to_organization_model
@@ -43,9 +43,6 @@ class DataIndexingService:
         self.org_id = org_id
         self.account_token = account_token
         self.storage_context = StorageContext.from_defaults(
-            docstore=DynamoDBDocumentStore.from_table_name(
-                table_name=DYNAMODB_STORAGE_CONTEXT_TABLE, namespace=org_id
-            ),
             index_store=DynamoDBIndexStore.from_table_name(
                 table_name=DYNAMODB_STORAGE_CONTEXT_TABLE, namespace=org_id
             ),
@@ -58,26 +55,6 @@ class DataIndexingService:
                 use_secure=True,
             ),
         )
-
-    def store_docs_to_docstore(self, nodes: Sequence[BaseNode]) -> bool:
-        logger.info(
-            "Storing docs to docstore. org_id=%s, account_token=%s",
-            self.org_id,
-            self.account_token,
-        )
-
-        try:
-            self.storage_context.docstore.add_documents(nodes)
-        except Exception as e:
-            logger.error(
-                "org_id=%s, account_token=%s, error=%s",
-                self.org_id,
-                self.account_token,
-                str(e),
-            )
-            return False
-
-        return True
 
     def store_vectors(self, nodes: Sequence[BaseNode]) -> bool:
         logger.info(
@@ -170,15 +147,11 @@ class DataIndexingService:
             callback_manager=CallbackManager([token_counter]),
         )
 
-        """
-        Commented out for now because we should determine how to apply this
-        It will depend on the use case
-
-        prioritize most recent information in the results
+        # prioritize most recent information in the results
         fixed_recency_postprocessor = FixedRecencyPostprocessor(
-            tok_k=5, date_key="date"  # the key in the metadata to find the date
+            tok_k=5, date_key="process_date"  # the key in the metadata to find the date
         )
-        """
+
         # re-order nodes, and returns the top N nodes
         cohere_rerank_postprocessor = CohereRerank(
             api_key=COHERE_API_KEY, top_n=self.top_k
@@ -194,7 +167,7 @@ class DataIndexingService:
             chat_mode=ChatMode.REACT,
             node_postprocessors=[
                 cohere_rerank_postprocessor,
-                # fixed_recency_postprocessor,
+                fixed_recency_postprocessor,
                 sentence_embedding_postprocessor,
             ],
         )
