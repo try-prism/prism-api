@@ -38,3 +38,7 @@ class RegisterUserRequest(BaseModel):
     id: str
     email: str
     name: str
+
+
+class SyncOrganizationDataRequest(BaseModel):
+    file_ids: list[str]
