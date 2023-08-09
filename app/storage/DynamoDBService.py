@@ -5,15 +5,18 @@ from typing import Any
 import boto3
 from botocore.exceptions import ClientError
 from constants import (
+    DYNAMODB_FILE_TABLE,
     DYNAMODB_ORGANIZATION_TABLE,
     DYNAMODB_USER_TABLE,
     DYNAMODB_WHITELIST_TABLE,
 )
 from exceptions import PrismDBException, PrismDBExceptionCode
+from merge.resources.filestorage.types import File
 from models import (
     OrganizationModel,
     UserModel,
     WhitelistModel,
+    get_file_key,
     get_organization_key,
     get_user_key,
     to_organization_model,
@@ -346,3 +349,30 @@ class DynamoDBService:
             field_name="document_list",
             field_value=document_list,
         )
+
+    def add_file(self, file: File) -> None:
+        new_file = {
+            "id": {"S": file.id or ""},
+            "remote_id": {"S": file.remote_id or ""},
+            "name": {"S": file.name or ""},
+            "file_url": {"S": file.file_url or ""},
+            "file_thumbnail_url": {"S": file.file_thumbnail_url or ""},
+            "size": {"N": file.size or 0},
+            "mime_type": {"S": file.mime_type or ""},
+            "description": {"S": file.description or ""},
+            "folder": {"S": file.folder or ""},
+            "permissions": {"L": file.permissions or []},
+            "drive": {"S": file.drive or ""},
+            "remote_created_at": {"S": file.remote_created_at or ""},
+            "remote_updated_at": {"S": file.remote_updated_at or ""},
+            "remote_was_deleted": {"BOOL": file.remote_was_deleted or False},
+            "modified_at": {"S": file.modified_at or ""},
+            "field_mappings": {"M": file.field_mappings or {}},
+            "remote_data": {"L": file.remote_data or []},
+        }
+
+        self.put_item(DYNAMODB_FILE_TABLE, new_file)
+
+    def remove_file(self, file_id: str) -> None:
+        key = get_file_key(file_id)
+        self.delete_item(DYNAMODB_FILE_TABLE, key)

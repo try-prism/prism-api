@@ -23,3 +23,7 @@ def to_file_model(response: dict) -> File:
         field_mappings=item.get("field_mappings", {"M": {}})["M"],
         remote_data=item.get("remote_data", {"L": []})["L"],
     )
+
+
+def get_file_key(file_id: str) -> dict:
+    return {"id": {"S": file_id}}

@@ -5,7 +5,7 @@ from typing import IO
 
 import ray
 from constants import PRISM_ENV, RAY_ADDRESS, RAY_RUNTIME_ENV
-from exceptions import PrismMergeException
+from exceptions import PrismException
 from llama_index import Document
 from llama_index.node_parser import SimpleNodeParser
 from llama_index.schema import BaseNode, TextNode
@@ -71,19 +71,21 @@ class DataPipelineService:
             file_in_bytes: IO[bytes] = self.merge_service.download_file(
                 file=file_row["data"], in_bytes=True
             )
-        except PrismMergeException as e:
+            loaded_doc = self.loader.load_data(
+                file=file_in_bytes, split_documents=False
+            )
+            loaded_doc[0].doc_id = file_row["data"].id
+            loaded_doc[0].metadata = {
+                "file_id": file_row["data"].id,
+                "process_date": self.process_date,
+            }
+            self.dynamodb_service.modify_organization_files(
+                org_id=self.org_id, file_id=file_row["data"].id, is_remove=False
+            )
+            self.dynamodb_service.add_file(file_row["data"])
+            documents.extend(loaded_doc)
+        except PrismException as e:
             logger.error("file_row=%s, error=%s", file_row, e)
-
-        loaded_doc = self.loader.load_data(file=file_in_bytes, split_documents=False)
-        loaded_doc[0].doc_id = file_row["data"].id
-        loaded_doc[0].metadata = {
-            "file_id": file_row["data"].id,
-            "process_date": self.process_date,
-        }
-        self.dynamodb_service.modify_organization_files(
-            org_id=self.org_id, file_id=file_row["data"].id, is_remove=False
-        )
-        documents.extend(loaded_doc)
 
         return [{"doc": doc} for doc in documents]
 
