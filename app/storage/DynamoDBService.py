@@ -28,18 +28,25 @@ from models import (
 logger = logging.getLogger(__name__)
 
 
-def exponential_backoff(func, *args, **kwargs):
-    retry_count = 0
+def exponential_backoff(func):
+    def wrapper(*args, **kwargs):
+        retry_count = 0
+        while True:
+            try:
+                return func(*args, **kwargs)
+            except ClientError as e:
+                if (
+                    e.response["Error"]["Code"]
+                    == "ProvisionedThroughputExceededException"
+                ):
+                    if retry_count == 5:
+                        raise
+                    retry_count += 1
+                    time.sleep(2**retry_count)
+                else:
+                    raise
 
-    while True:
-        try:
-            return func(*args, **kwargs)
-        except ClientError as e:
-            if e.response["Error"]["Code"] == "ProvisionedThroughputExceededException":
-                retry_count += 1
-                time.sleep(2**retry_count)
-            else:
-                raise
+    return wrapper
 
 
 class DynamoDBService:
