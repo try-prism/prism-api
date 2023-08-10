@@ -1,5 +1,6 @@
 import logging
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
 
 import boto3
@@ -25,6 +26,20 @@ from models import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def exponential_backoff(func, *args, **kwargs):
+    retry_count = 0
+
+    while True:
+        try:
+            return func(*args, **kwargs)
+        except ClientError as e:
+            if e.response["Error"]["Code"] == "ProvisionedThroughputExceededException":
+                retry_count += 1
+                time.sleep(2**retry_count)
+            else:
+                raise
 
 
 class DynamoDBService:
@@ -88,53 +103,41 @@ class DynamoDBService:
 
         return retrieved
 
-    def batch_put_item(self, table_name: str, items: list[dict]) -> None:
-        try:
-            table = self.resource.Table(table_name)
-        except Exception as e:
-            logger.error(
-                "table_name=%s, len(items)=%s, error=%s", table_name, len(items), str(e)
-            )
-            raise PrismDBException(
-                code=PrismDBExceptionCode.COULD_NOT_CREATE_TABLE,
-                message="Could not create table from resource",
-            )
+    def batch_write(self, table_name: str, items: list[dict]) -> None:
+        table = self.resource.Table(table_name)
 
         with table.batch_writer() as batch:
             for i in range(len(items)):
-                try:
-                    batch.put_item(Item=items[i])
-                except Exception as e:
-                    logger.error(
-                        "table_name=%s, item=%s, error=%s",
-                        table_name,
-                        items[i],
-                        str(e),
-                    )
+                batch.put_item(Item=items[i])
 
-    def batch_delete_item(self, table_name: str, keys: list[dict]) -> None:
-        try:
-            table = self.resource.Table(table_name)
-        except Exception as e:
-            logger.error(
-                "table_name=%s, len(keys)=%s, error=%s", table_name, len(keys), str(e)
-            )
-            raise PrismDBException(
-                code=PrismDBExceptionCode.COULD_NOT_CREATE_TABLE,
-                message="Could not create table from resource",
-            )
+    def batch_delete(self, table_name: str, keys: list[dict]) -> None:
+        table = self.resource.Table(table_name)
 
         with table.batch_writer() as batch:
             for i in range(len(keys)):
-                try:
-                    batch.delete_item(Key=keys[i])
-                except Exception as e:
-                    logger.error(
-                        "table_name=%s, key=%s, error=%s",
-                        table_name,
-                        keys[i],
-                        str(e),
-                    )
+                batch.delete_item(Key=keys[i])
+
+    def parallel_batch_write(
+        self, table_name: str, items: list[dict], is_delete: bool
+    ) -> None:
+        ops = self.batch_delete if is_delete else self.batch_write
+
+        with ThreadPoolExecutor(max_workers=4) as executor:
+            futures = [
+                executor.submit(ops, table_name, items[i : i + 100])
+                for i in range(0, len(items), 100)
+            ]
+
+        for future in as_completed(futures):
+            future.result()
+
+    @exponential_backoff
+    def optimized_batch_write(
+        self, table_name: str, items: list[dict], is_delete: bool
+    ) -> None:
+        self.parallel_batch_write(
+            table_name=table_name, items=items, is_delete=is_delete
+        )
 
     def update_item(
         self, table_name: str, key: dict, field_name: str, field_value: Any
