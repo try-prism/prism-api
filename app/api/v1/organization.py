@@ -24,7 +24,8 @@ from models.ResponseModels import (
     RemoveOrganizationResponse,
     UpdateOrganizationResponse,
 )
-from services import SESService
+from pipeline import DataIndexingService
+from services import CognitoService, SESService
 from storage import DynamoDBService
 
 router = APIRouter()
@@ -109,18 +110,41 @@ async def remove_organization(
     logger.info("remove_request=%s", remove_request)
 
     dynamodb_service = DynamoDBService()
+    cognito_service = CognitoService()
+    data_index_service = DataIndexingService(org_id=remove_request.organization_id)
+
     try:
+        organization = dynamodb_service.get_organization(
+            org_id=remove_request.organization_id
+        )
+
+        # Remove file data from the database
+        dynamodb_service.remove_file_in_batch(organization.document_list)
+
+        # Remove users
+        for id in organization.user_list:
+            dynamodb_service.remove_user(user_id=id, org_admin_id=organization.admin_id)
+            cognito_service.remove_user(user_id=id)
+
+        # Drop collection from the vector store
+        data_index_service.drop_collection()
+
         response = dynamodb_service.remove_organization(
             org_id=remove_request.organization_id,
             org_admin_id=remove_request.organization_admin_id,
         )
-    except PrismDBException as e:
+    except Exception as e:
         logger.error("remove_request=%s, error=%s", remove_request, e)
-        return ErrorDTO(code=e.code, message=e.message)
+
+        if isinstance(e, PrismDBException):
+            return ErrorDTO(code=e.code, message=e.message)
+
+        return ErrorDTO(
+            code=HTTPStatus.INTERNAL_SERVER_ERROR.value,
+            description="Internal server error",
+        )
 
     logger.info("remove_request=%s, response=%s", remove_request, response)
-
-    # TODO: remove organization related data
 
     return RemoveOrganizationResponse(status=HTTPStatus.OK.value)
 

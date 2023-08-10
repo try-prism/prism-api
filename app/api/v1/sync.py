@@ -73,12 +73,10 @@ async def sync_organization_data(
         data_index_service.delete_nodes(remove_ids)
 
         # Remove file data from file table and organization
-        # TODO: Remove using batch operation
-        for file_id in remove_ids:
-            dynamodb_service.modify_organization_files(
-                org_id=org_id, file_id=file_id, is_remove=True
-            )
-            dynamodb_service.remove_file(file_id=file_id)
+        dynamodb_service.modify_organization_files(
+            org_id=org_id, file_ids=remove_ids, is_remove=True
+        )
+        dynamodb_service.remove_file_in_batch(remove_ids)
 
         # Get files
         for batch in file_id_batch:

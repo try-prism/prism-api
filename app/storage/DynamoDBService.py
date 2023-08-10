@@ -1,5 +1,6 @@
 import logging
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
 
 import boto3
@@ -27,6 +28,20 @@ from models import (
 logger = logging.getLogger(__name__)
 
 
+def exponential_backoff(func, *args, **kwargs):
+    retry_count = 0
+
+    while True:
+        try:
+            return func(*args, **kwargs)
+        except ClientError as e:
+            if e.response["Error"]["Code"] == "ProvisionedThroughputExceededException":
+                retry_count += 1
+                time.sleep(2**retry_count)
+            else:
+                raise
+
+
 class DynamoDBService:
     """
     Handles all of the operations related to DynamoDB.
@@ -37,6 +52,7 @@ class DynamoDBService:
 
     def __init__(self):
         self.client = boto3.client("dynamodb")
+        self.resource = boto3.resource("dynamodb")
 
     def get_client(self):
         return self.client
@@ -86,6 +102,42 @@ class DynamoDBService:
             retrieved[key] += response["Responses"][key]
 
         return retrieved
+
+    def batch_write(self, table_name: str, items: list[dict]) -> None:
+        table = self.resource.Table(table_name)
+
+        with table.batch_writer() as batch:
+            for i in range(len(items)):
+                batch.put_item(Item=items[i])
+
+    def batch_delete(self, table_name: str, keys: list[dict]) -> None:
+        table = self.resource.Table(table_name)
+
+        with table.batch_writer() as batch:
+            for i in range(len(keys)):
+                batch.delete_item(Key=keys[i])
+
+    def parallel_batch_write(
+        self, table_name: str, items: list[dict], is_delete: bool
+    ) -> None:
+        ops = self.batch_delete if is_delete else self.batch_write
+
+        with ThreadPoolExecutor(max_workers=4) as executor:
+            futures = [
+                executor.submit(ops, table_name, items[i : i + 100])
+                for i in range(0, len(items), 100)
+            ]
+
+        for future in as_completed(futures):
+            future.result()
+
+    @exponential_backoff
+    def optimized_batch_write(
+        self, table_name: str, items: list[dict], is_delete: bool
+    ) -> None:
+        self.parallel_batch_write(
+            table_name=table_name, items=items, is_delete=is_delete
+        )
 
     def update_item(
         self, table_name: str, key: dict, field_name: str, field_value: Any
@@ -330,24 +382,24 @@ class DynamoDBService:
         )
 
     def modify_organization_files(
-        self, org_id: str, file_id: str, is_remove: bool
+        self, org_id: str, file_ids: list[str], is_remove: bool
     ) -> None:
         response = self.get_organization(org_id)
         org_item = to_organization_model(response)
 
         document_list = org_item.document_list
+        temp_file_set = set(document_list)
+
         if is_remove:
-            if file_id in document_list:
-                document_list.remove(file_id)
+            temp_file_set.difference_update(file_ids)
         else:
-            if file_id not in document_list:
-                document_list.append(file_id)
+            temp_file_set.update(file_ids)
 
         self.update_item(
             DYNAMODB_ORGANIZATION_TABLE,
             get_organization_key(org_id),
             field_name="document_list",
-            field_value=document_list,
+            field_value=list(temp_file_set),
         )
 
     def add_file(self, file: File) -> None:
@@ -373,6 +425,12 @@ class DynamoDBService:
 
         self.put_item(DYNAMODB_FILE_TABLE, new_file)
 
-    def remove_file(self, file_id: str) -> None:
-        key = get_file_key(file_id)
-        self.delete_item(DYNAMODB_FILE_TABLE, key)
+    def remove_file_in_batch(self, file_ids: list[str]) -> None:
+        logger.info(f"Removing {len(file_ids)} files in batch")
+
+        keys = [get_file_key(file_id) for file_id in file_ids]
+        self.optimized_batch_write(
+            table_name=DYNAMODB_FILE_TABLE, items=keys, is_delete=True
+        )
+
+        logger.info(f"Removed {len(file_ids)} files in batch")

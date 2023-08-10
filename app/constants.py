@@ -34,10 +34,6 @@ DYNAMODB_ORGANIZATION_TABLE = os.environ["DYNAMODB_ORGANIZATION_TABLE"]
 DYNAMODB_WHITELIST_TABLE = os.environ["DYNAMODB_WHITELIST_TABLE"]
 
 
-# S3 Buckets
-S3_FILE_BUCKET = os.environ["S3_FILE_BUCKET"]
-
-
 # SES Configurations
 SES_SENDER_EMAIL = "noreply@tryprism.ai"
 DEFAULT_SIGNUP_URL = "http://tryprism.ai/signup?user="

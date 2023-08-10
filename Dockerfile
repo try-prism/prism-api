@@ -32,8 +32,6 @@ ENV DYNAMODB_FILE_TABLE=srv-prism-file
 ENV DYNAMODB_ORGANIZATION_TABLE=srv-prism-organization
 ENV DYNAMODB_WHITELIST_TABLE=srv-prism-whitelist
 
-ENV S3_FILE_BUCKET=srv-prism-file-store
-
 ENV COGNITO_USER_POOL_ID=test-pool-id
 
 ENV ZILLIZ_CLOUD_HOST=tmp-host
