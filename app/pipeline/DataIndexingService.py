@@ -27,7 +27,7 @@ from llama_index.llms import OpenAI
 from llama_index.schema import BaseNode
 from llama_index.vector_stores import MilvusVectorStore
 from llama_index.vector_stores.types import NodeWithEmbedding
-from pymilvus import MilvusException
+from pymilvus import Collection, MilvusException
 
 logger = logging.getLogger(__name__)
 
@@ -104,6 +104,27 @@ class DataIndexingService:
             "Finished deleting nodes. org_id=%s, ref_doc_ids=%s",
             self.org_id,
             ref_doc_ids,
+        )
+
+    def drop_collection(self) -> None:
+        logger.info(
+            "Dropping collection. org_id=%s",
+            self.org_id,
+        )
+
+        try:
+            collection: Collection = self.storage_context.vector_store.collection
+            collection.drop()
+        except MilvusException as e:
+            logger.error(
+                "org_id=%s, error=%s",
+                self.org_id,
+                e,
+            )
+
+        logger.info(
+            "Finished dropping collection. org_id=%s",
+            self.org_id,
         )
 
     def load_vector_index(self) -> VectorStoreIndex:

@@ -24,7 +24,8 @@ from models.ResponseModels import (
     RemoveOrganizationResponse,
     UpdateOrganizationResponse,
 )
-from services import SESService
+from pipeline import DataIndexingService
+from services import CognitoService, SESService
 from storage import DynamoDBService
 
 router = APIRouter()
@@ -109,7 +110,28 @@ async def remove_organization(
     logger.info("remove_request=%s", remove_request)
 
     dynamodb_service = DynamoDBService()
+    cognito_service = CognitoService()
+    data_index_service = DataIndexingService(org_id=remove_request.organization_id)
+
     try:
+        organization = dynamodb_service.get_organization(
+            org_id=remove_request.organization_id
+        )
+
+        # TODO: remove all of these using batch operations
+
+        # Remove file data from the database
+        for id in organization.document_list:
+            dynamodb_service.remove_file(file_id=id)
+
+        # Remove users
+        for id in organization.user_list:
+            dynamodb_service.remove_user(user_id=id, org_admin_id=organization.admin_id)
+            cognito_service.remove_user(user_id=id)
+
+        # Drop collection from the vector store
+        data_index_service.drop_collection()
+
         response = dynamodb_service.remove_organization(
             org_id=remove_request.organization_id,
             org_admin_id=remove_request.organization_admin_id,
@@ -119,8 +141,6 @@ async def remove_organization(
         return ErrorDTO(code=e.code, message=e.message)
 
     logger.info("remove_request=%s, response=%s", remove_request, response)
-
-    # TODO: remove organization related data
 
     return RemoveOrganizationResponse(status=HTTPStatus.OK.value)
 
