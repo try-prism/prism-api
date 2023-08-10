@@ -37,6 +37,7 @@ class DynamoDBService:
 
     def __init__(self):
         self.client = boto3.client("dynamodb")
+        self.resource = boto3.resource("dynamodb")
 
     def get_client(self):
         return self.client
@@ -86,6 +87,54 @@ class DynamoDBService:
             retrieved[key] += response["Responses"][key]
 
         return retrieved
+
+    def batch_put_item(self, table_name: str, items: list[dict]) -> None:
+        try:
+            table = self.resource.Table(table_name)
+        except Exception as e:
+            logger.error(
+                "table_name=%s, len(items)=%s, error=%s", table_name, len(items), str(e)
+            )
+            raise PrismDBException(
+                code=PrismDBExceptionCode.COULD_NOT_CREATE_TABLE,
+                message="Could not create table from resource",
+            )
+
+        with table.batch_writer() as batch:
+            for i in range(len(items)):
+                try:
+                    batch.put_item(Item=items[i])
+                except Exception as e:
+                    logger.error(
+                        "table_name=%s, item=%s, error=%s",
+                        table_name,
+                        items[i],
+                        str(e),
+                    )
+
+    def batch_delete_item(self, table_name: str, keys: list[dict]) -> None:
+        try:
+            table = self.resource.Table(table_name)
+        except Exception as e:
+            logger.error(
+                "table_name=%s, len(keys)=%s, error=%s", table_name, len(keys), str(e)
+            )
+            raise PrismDBException(
+                code=PrismDBExceptionCode.COULD_NOT_CREATE_TABLE,
+                message="Could not create table from resource",
+            )
+
+        with table.batch_writer() as batch:
+            for i in range(len(keys)):
+                try:
+                    batch.delete_item(Key=keys[i])
+                except Exception as e:
+                    logger.error(
+                        "table_name=%s, key=%s, error=%s",
+                        table_name,
+                        keys[i],
+                        str(e),
+                    )
 
     def update_item(
         self, table_name: str, key: dict, field_name: str, field_value: Any
