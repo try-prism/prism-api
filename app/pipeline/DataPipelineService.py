@@ -80,7 +80,7 @@ class DataPipelineService:
                 "process_date": self.process_date,
             }
             self.dynamodb_service.modify_organization_files(
-                org_id=self.org_id, file_id=file_row["data"].id, is_remove=False
+                org_id=self.org_id, file_ids=[file_row["data"].id], is_remove=False
             )
             self.dynamodb_service.add_file(file_row["data"])
             documents.extend(loaded_doc)

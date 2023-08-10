@@ -382,24 +382,24 @@ class DynamoDBService:
         )
 
     def modify_organization_files(
-        self, org_id: str, file_id: str, is_remove: bool
+        self, org_id: str, file_ids: list[str], is_remove: bool
     ) -> None:
         response = self.get_organization(org_id)
         org_item = to_organization_model(response)
 
         document_list = org_item.document_list
+        temp_file_set = set(document_list)
+
         if is_remove:
-            if file_id in document_list:
-                document_list.remove(file_id)
+            temp_file_set.difference_update(file_ids)
         else:
-            if file_id not in document_list:
-                document_list.append(file_id)
+            temp_file_set.update(file_ids)
 
         self.update_item(
             DYNAMODB_ORGANIZATION_TABLE,
             get_organization_key(org_id),
             field_name="document_list",
-            field_value=document_list,
+            field_value=list(temp_file_set),
         )
 
     def add_file(self, file: File) -> None:
@@ -425,6 +425,12 @@ class DynamoDBService:
 
         self.put_item(DYNAMODB_FILE_TABLE, new_file)
 
-    def remove_file(self, file_id: str) -> None:
-        key = get_file_key(file_id)
-        self.delete_item(DYNAMODB_FILE_TABLE, key)
+    def remove_file_in_batch(self, file_ids: list[str]) -> None:
+        logger.info(f"Removing {len(file_ids)} files in batch")
+
+        keys = [get_file_key(file_id) for file_id in file_ids]
+        self.optimized_batch_write(
+            table_name=DYNAMODB_FILE_TABLE, items=keys, is_delete=True
+        )
+
+        logger.info(f"Removed {len(file_ids)} files in batch")

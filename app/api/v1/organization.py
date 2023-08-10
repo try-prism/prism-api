@@ -118,11 +118,8 @@ async def remove_organization(
             org_id=remove_request.organization_id
         )
 
-        # TODO: remove all of these using batch operations
-
         # Remove file data from the database
-        for id in organization.document_list:
-            dynamodb_service.remove_file(file_id=id)
+        dynamodb_service.remove_file_in_batch(organization.document_list)
 
         # Remove users
         for id in organization.user_list:
@@ -136,9 +133,16 @@ async def remove_organization(
             org_id=remove_request.organization_id,
             org_admin_id=remove_request.organization_admin_id,
         )
-    except PrismDBException as e:
+    except Exception as e:
         logger.error("remove_request=%s, error=%s", remove_request, e)
-        return ErrorDTO(code=e.code, message=e.message)
+
+        if isinstance(e, PrismDBException):
+            return ErrorDTO(code=e.code, message=e.message)
+
+        return ErrorDTO(
+            code=HTTPStatus.INTERNAL_SERVER_ERROR.value,
+            description="Internal server error",
+        )
 
     logger.info("remove_request=%s, response=%s", remove_request, response)
 
