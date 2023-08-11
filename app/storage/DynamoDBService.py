@@ -4,6 +4,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
 
 import boto3
+from boto3.dynamodb.conditions import Key
 from botocore.exceptions import ClientError
 from constants import (
     DYNAMODB_FILE_TABLE,
@@ -60,9 +61,6 @@ class DynamoDBService:
     def __init__(self):
         self.client = boto3.client("dynamodb")
         self.resource = boto3.resource("dynamodb")
-
-    def get_client(self):
-        return self.client
 
     def put_item(self, table_name: str, item: dict) -> None:
         try:
@@ -409,7 +407,7 @@ class DynamoDBService:
             field_value=list(temp_file_set),
         )
 
-    def add_file(self, file: File) -> None:
+    def add_file(self, file: File, account_token: str) -> None:
         new_file = {
             "id": {"S": file.id or ""},
             "remote_id": {"S": file.remote_id or ""},
@@ -428,6 +426,8 @@ class DynamoDBService:
             "modified_at": {"S": file.modified_at or ""},
             "field_mappings": {"M": file.field_mappings or {}},
             "remote_data": {"L": file.remote_data or []},
+            # Custom fields
+            "account_token": {"S": account_token},
         }
 
         self.put_item(DYNAMODB_FILE_TABLE, new_file)
@@ -441,3 +441,27 @@ class DynamoDBService:
         )
 
         logger.info(f"Removed {len(file_ids)} files in batch")
+
+    def get_all_file_ids_for_integration(self, account_token: str) -> list[str]:
+        ids = []
+        table = self.resource.Table(DYNAMODB_FILE_TABLE)
+
+        response = table.query(
+            Select="SPECIFIC_ATTRIBUTES",
+            AttributesToGet=["id"],
+            KeyConditionExpression=Key("account_token").eq(account_token),
+        )
+        ids.extend(response["Items"])
+
+        while "LastEvaluatedKey" in response:
+            response = table.query(
+                Select="SPECIFIC_ATTRIBUTES",
+                AttributesToGet=["id"],
+                KeyConditionExpression=Key("account_token").eq(account_token),
+                ExclusiveStartKey=response["LastEvaluatedKey"],
+            )
+            ids.extend(response["Items"])
+
+        cleaned_ids = [i["id"]["S"] for i in ids]
+
+        return cleaned_ids

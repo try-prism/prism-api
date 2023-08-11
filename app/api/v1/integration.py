@@ -15,6 +15,7 @@ from models.ResponseModels import (
     IntegrationRemoveResponse,
     IntegrationResponse,
 )
+from pipeline import DataIndexingService
 from storage import DynamoDBService, MergeService
 from tasks.IntegrationTask import initiate_file_processing
 
@@ -153,9 +154,11 @@ async def remove_integration_detail(
         "org_id=%s, integration_account_token=%s", org_id, integration_account_token
     )
 
-    # Remove organization's integration detail
     dynamodb_service = DynamoDBService()
+    data_index_service = DataIndexingService(org_id=org_id)
+
     try:
+        # Remove organization's integration detail
         organization = dynamodb_service.get_organization(org_id)
     except PrismDBException as e:
         logger.error(
@@ -173,7 +176,7 @@ async def remove_integration_detail(
         logger.info("org_id=%s, link_id_map=%s", org_id, link_id_map)
         del link_id_map[integration_account_token]
 
-        dynamodb_service.get_client().update_item(
+        dynamodb_service.client.update_item(
             TableName=DYNAMODB_ORGANIZATION_TABLE,
             Key=get_organization_key(org_id),
             UpdateExpression="SET link_id_map = :map, updated_at = :ua",
@@ -189,7 +192,28 @@ async def remove_integration_detail(
         logger.error(str(e))
         return ErrorDTO(code=HTTPStatus.FORBIDDEN.value, description=str(e))
 
-    # TODO: Remove data related to this integration
+    # Remove data related to this integration from file database
+    related_file_ids = dynamodb_service.get_all_file_ids_for_integration(
+        account_token=integration_account_token
+    )
+    dynamodb_service.remove_file_in_batch(related_file_ids)
+
+    # Remove data related to this integration from vector store
+    data_index_service.delete_nodes(related_file_ids)
+
+    # Remove data related to this integration from organization database
+    try:
+        dynamodb_service.modify_organization_files(
+            org_id=org_id, file_ids=related_file_ids, is_remove=True
+        )
+    except PrismDBException as e:
+        logger.error(
+            "org_id=%s, integration_account_token=%s, error=%s",
+            org_id,
+            integration_account_token,
+            e,
+        )
+        return ErrorDTO(code=e.code, description=e.message)
 
     return IntegrationRemoveResponse(status=HTTPStatus.OK.value)
 
