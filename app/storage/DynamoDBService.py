@@ -12,6 +12,7 @@ from constants import (
     DYNAMODB_USER_TABLE,
     DYNAMODB_WHITELIST_TABLE,
 )
+from enums import IntegrationStatus
 from exceptions import PrismDBException, PrismDBExceptionCode
 from merge.resources.filestorage.types import File
 from models import (
@@ -26,8 +27,6 @@ from models import (
     to_whitelist_model,
 )
 from storage import MergeService
-
-from app.enums import IntegrationStatus
 
 logger = logging.getLogger(__name__)
 
