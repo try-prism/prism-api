@@ -1,7 +1,6 @@
 import logging
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import Any
 
 import boto3
 from boto3.dynamodb.conditions import Key
@@ -93,7 +92,7 @@ class DynamoDBService:
         return response
 
     def update_item(
-        self, table_name: str, key: dict, field_name: str, field_value: Any
+        self, table_name: str, key: dict, field_name: str, field_value: dict
     ) -> None:
         try:
             self.client.update_item(
