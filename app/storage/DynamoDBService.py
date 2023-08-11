@@ -92,6 +92,46 @@ class DynamoDBService:
 
         return response
 
+    def update_item(
+        self, table_name: str, key: dict, field_name: str, field_value: Any
+    ) -> None:
+        try:
+            self.client.update_item(
+                TableName=table_name,
+                Key=key,
+                UpdateExpression=f"SET {field_name} = :v, updated_at = :ua",
+                ExpressionAttributeValues={
+                    ":v": field_value,
+                    ":ua": {"S": str(time.time())},
+                },
+            )
+        except ClientError as e:
+            logger.error(
+                "table_name=%s, key=%s, field_name=%s, field_value=%s, error=%s",
+                table_name,
+                key,
+                field_name,
+                field_value,
+                str(e),
+            )
+            raise PrismDBException(
+                code=PrismDBExceptionCode.ITEM_UPDATE_ERROR,
+                message="Could not update item to table",
+            )
+
+    def delete_item(self, table_name: str, key: dict) -> dict:
+        response = self.client.delete_item(
+            TableName=table_name, Key=key, ReturnValues="ALL_OLD"
+        )
+
+        if "Item" not in response:
+            raise PrismDBException(
+                code=PrismDBExceptionCode.ITEM_DOES_NOT_EXIST,
+                message="Item does not exist",
+            )
+
+        return response
+
     def batch_get_item(
         self, table_name: str, field_name: str, field_values: list[str]
     ) -> dict:
@@ -146,46 +186,6 @@ class DynamoDBService:
         self.parallel_batch_write(
             table_name=table_name, items=items, is_remove=is_remove
         )
-
-    def update_item(
-        self, table_name: str, key: dict, field_name: str, field_value: Any
-    ) -> None:
-        try:
-            self.client.update_item(
-                TableName=table_name,
-                Key=key,
-                UpdateExpression=f"SET {field_name} = :v, updated_at = :ua",
-                ExpressionAttributeValues={
-                    ":v": field_value,
-                    ":ua": {"S": str(time.time())},
-                },
-            )
-        except ClientError as e:
-            logger.error(
-                "table_name=%s, key=%s, field_name=%s, field_value=%s, error=%s",
-                table_name,
-                key,
-                field_name,
-                field_value,
-                str(e),
-            )
-            raise PrismDBException(
-                code=PrismDBExceptionCode.ITEM_UPDATE_ERROR,
-                message="Could not update item to table",
-            )
-
-    def delete_item(self, table_name: str, key: dict) -> dict:
-        response = self.client.delete_item(
-            TableName=table_name, Key=key, ReturnValues="ALL_OLD"
-        )
-
-        if "Item" not in response:
-            raise PrismDBException(
-                code=PrismDBExceptionCode.ITEM_DOES_NOT_EXIST,
-                message="Item does not exist",
-            )
-
-        return response
 
     def register_organization(
         self, org_id: str, org_name: str, org_email: str, org_admin_id: str
@@ -388,7 +388,21 @@ class DynamoDBService:
             DYNAMODB_ORGANIZATION_TABLE,
             get_organization_key(org_id),
             field_name="link_id_map",
-            field_value=link_id_map,
+            field_value={"M": link_id_map},
+        )
+
+    def remove_integration(self, org_id: str, account_token: str) -> None:
+        response = self.get_organization(org_id)
+        org_item = to_organization_model(response)
+
+        link_id_map = org_item.link_id_map
+        del link_id_map[account_token]
+
+        self.update_item(
+            DYNAMODB_ORGANIZATION_TABLE,
+            get_organization_key(org_id),
+            field_name="link_id_map",
+            field_value={"M": link_id_map},
         )
 
     def modify_integration_status(
@@ -404,7 +418,7 @@ class DynamoDBService:
             DYNAMODB_ORGANIZATION_TABLE,
             get_organization_key(org_id),
             field_name="link_id_map",
-            field_value=link_id_map,
+            field_value={"M": link_id_map},
         )
 
     def modify_organization_files(
@@ -425,7 +439,7 @@ class DynamoDBService:
             DYNAMODB_ORGANIZATION_TABLE,
             get_organization_key(org_id),
             field_name="document_list",
-            field_value=list(temp_file_set),
+            field_value={"L": list(temp_file_set)},
         )
 
     def modify_file_in_batch(
@@ -500,3 +514,24 @@ class DynamoDBService:
 
         cleaned_ids = [i["id"]["S"] for i in ids]
         return cleaned_ids
+
+    def change_org_admin(self, org_id: str, new_admin_id: str) -> None:
+        organization = self.get_organization(org_id)
+
+        if organization.admin_id != new_admin_id:
+            logger.error(
+                "org_id=%s, new_admin_id=%s error=no permission to edit this organization",
+                org_id,
+                new_admin_id,
+            )
+            raise PrismDBException(
+                code=PrismDBExceptionCode.NOT_ENOUGH_PERMISSION,
+                message="You don't have permission to edit this organization",
+            )
+
+        self.update_item(
+            DYNAMODB_ORGANIZATION_TABLE,
+            get_organization_key(org_id),
+            field_name="admin_id",
+            field_value={"S": new_admin_id},
+        )

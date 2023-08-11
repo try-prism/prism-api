@@ -22,7 +22,7 @@ class RemoveOrganizationRequest(BaseModel):
 
 
 class UpdateOrganizationRequest(BaseModel):
-    organization_admin_id: str
+    new_organization_admin_id: str
     prev_organization_admin_id: str
 
 
