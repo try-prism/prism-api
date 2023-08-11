@@ -130,9 +130,9 @@ class DynamoDBService:
                 batch.delete_item(Key=keys[i])
 
     def parallel_batch_write(
-        self, table_name: str, items: list[dict], is_delete: bool
+        self, table_name: str, items: list[dict], is_remove: bool
     ) -> None:
-        ops = self.batch_delete if is_delete else self.batch_write
+        ops = self.batch_delete if is_remove else self.batch_write
 
         with ThreadPoolExecutor(max_workers=4) as executor:
             futures = [
@@ -145,10 +145,10 @@ class DynamoDBService:
 
     @exponential_backoff
     def optimized_batch_write(
-        self, table_name: str, items: list[dict], is_delete: bool
+        self, table_name: str, items: list, is_remove: bool
     ) -> None:
         self.parallel_batch_write(
-            table_name=table_name, items=items, is_delete=is_delete
+            table_name=table_name, items=items, is_remove=is_remove
         )
 
     def update_item(
@@ -425,29 +425,56 @@ class DynamoDBService:
         else:
             temp_file_set.update(file_ids)
 
-        self.update_item(
-            DYNAMODB_ORGANIZATION_TABLE,
-            get_organization_key(org_id),
-            field_name="document_list",
-            field_value=list(temp_file_set),
-        )
+        try:
+            self.update_item(
+                DYNAMODB_ORGANIZATION_TABLE,
+                get_organization_key(org_id),
+                field_name="document_list",
+                field_value=list(temp_file_set),
+            )
+        except ClientError as e:
+            logger.error(
+                "org_id=%s, len(file_ids)=%s, is_remove=%s, error=%s",
+                org_id,
+                len(file_ids),
+                is_remove,
+                str(e),
+            )
+            raise PrismDBException(
+                code=PrismDBExceptionCode.ITEM_BATCH_PROCESS_ERROR,
+                message="Failed to modify organization files in batch",
+            )
 
-    def add_file(self, file: File, account_token: str) -> None:
-        new_file = file.dict()
-        new_file["account_token"] = account_token
-        file_item = self.serialize(new_file)
+    def modify_file_in_batch(
+        self,
+        account_token: str | None,
+        file_ids: list[str] | None,
+        files: list[File] | None,
+        is_remove: bool,
+    ) -> None:
+        if is_remove and not account_token:
+            raise PrismDBException(
+                code=PrismDBExceptionCode.INVALID_ARGUMENT,
+                message="account_token is required when removing files",
+            )
 
-        self.put_item(DYNAMODB_FILE_TABLE, file_item)
+        logger.info(f"Modifying {len(file_ids)} files in batch")
 
-    def remove_file_in_batch(self, file_ids: list[str]) -> None:
-        logger.info(f"Removing {len(file_ids)} files in batch")
+        if is_remove:
+            items = [get_file_key(file_id) for file_id in file_ids]
+        else:
+            items = []
+            for file in files:
+                new_file = file.dict()
+                new_file["account_token"] = account_token
+                file_item = self.serialize(new_file)
+                items.append(file_item)
 
-        keys = [get_file_key(file_id) for file_id in file_ids]
         self.optimized_batch_write(
-            table_name=DYNAMODB_FILE_TABLE, items=keys, is_delete=True
+            table_name=DYNAMODB_FILE_TABLE, items=items, is_remove=is_remove
         )
 
-        logger.info(f"Removed {len(file_ids)} files in batch")
+        logger.info(f"Modified {len(file_ids)} files in batch")
 
     def get_all_file_ids_for_integration(self, account_token: str) -> list[str]:
         ids = []
