@@ -9,6 +9,7 @@ from exceptions import PrismMergeException, PrismMergeExceptionCode
 from merge.client import Merge
 from merge.core.api_error import ApiError
 from merge.resources.filestorage.types import (
+    AccountDetails,
     CategoriesEnum,
     File,
     PaginatedFileList,
@@ -23,8 +24,8 @@ class MergeService:
     """https://github.com/merge-api/merge-python-client"""
 
     def __init__(self, account_token: str | None = None):
-        self.client = Merge(api_key=MERGE_API_KEY, account_token=account_token)
         self.account_token = account_token
+        self.client = Merge(api_key=MERGE_API_KEY, account_token=account_token)
 
     def generate_link_token(self, org_id: str, org_name: str, org_email: str) -> str:
         try:
@@ -62,6 +63,25 @@ class MergeService:
             )
 
         return account_token_response.account_token
+
+    def get_integration_provider(self) -> AccountDetails:
+        if not self.account_token:
+            logger.error("Account token can't be null")
+            raise PrismMergeException(
+                code=PrismMergeExceptionCode.INVALID_ACCOUNT_TOKEN,
+                message="Account token can't be null",
+            )
+
+        try:
+            integration_provider = self.client.filestorage.account_details.retrieve()
+        except Exception as e:
+            logger.error("account_token=%s, error=%s", self.account_token, str(e))
+            raise PrismMergeException(
+                code=PrismMergeExceptionCode.COULD_NOT_FETCH_INTEGRATION_DETAILS,
+                message="Could not get integration provider details",
+            )
+
+        return integration_provider
 
     def check_sync_status(self) -> bool:
         if not self.account_token:

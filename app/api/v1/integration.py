@@ -70,7 +70,6 @@ async def integration(
         dynamodb_service.add_integration(
             org_id=integration_request.organization_id,
             account_token=account_token,
-            status="SYNCING",
         )
     except PrismException as e:
         logger.error(
