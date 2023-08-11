@@ -234,7 +234,7 @@ async def update_organization(org_id: str, update_request: UpdateOrganizationReq
         )
 
     try:
-        dynamodb_service.get_client().update_item(
+        dynamodb_service.client.update_item(
             TableName=DYNAMODB_ORGANIZATION_TABLE,
             Key=get_organization_key(org_id),
             UpdateExpression="SET admin_id = :id, updated_at = :ua",

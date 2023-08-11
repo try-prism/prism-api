@@ -79,10 +79,14 @@ class DataPipelineService:
                 "file_id": file_row["data"].id,
                 "process_date": self.process_date,
             }
+
+            # TODO: think of a better way to batch process this
             self.dynamodb_service.modify_organization_files(
                 org_id=self.org_id, file_ids=[file_row["data"].id], is_remove=False
             )
-            self.dynamodb_service.add_file(file_row["data"])
+            self.dynamodb_service.add_file(
+                file=file_row["data"], account_token=self.account_token
+            )
             documents.extend(loaded_doc)
         except PrismException as e:
             logger.error("file_row=%s, error=%s", file_row, e)
