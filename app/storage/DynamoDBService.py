@@ -5,7 +5,7 @@ from typing import Any
 
 import boto3
 from boto3.dynamodb.conditions import Key
-from boto3.dynamodb.types import TypeSerializer
+from boto3.dynamodb.types import TypeDeserializer, TypeSerializer
 from botocore.exceptions import ClientError
 from constants import (
     DYNAMODB_FILE_TABLE,
@@ -65,9 +65,13 @@ class DynamoDBService:
         self.client = boto3.client("dynamodb")
         self.resource = boto3.resource("dynamodb")
         self.serializer = TypeSerializer()
+        self.deserializer = TypeDeserializer()
 
     def serialize(self, object: dict) -> dict:
         return {k: self.serializer.serialize(v) for k, v in object.items()}
+
+    def deserialize(self, object: dict) -> dict:
+        return {k: self.deserializer.deserialize(v) for k, v in object.items()}
 
     def put_item(self, table_name: str, item: dict) -> None:
         try:
