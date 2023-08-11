@@ -1,6 +1,7 @@
 import logging
 import time
 
+from enums import IntegrationStatus
 from models.RequestModels import IntegrationRequest
 from pipeline import DataIndexingService, DataPipelineService
 from storage import DynamoDBService, MergeService
@@ -28,10 +29,10 @@ def initiate_file_processing(
 
         file_list = merge_service.generate_file_list()
 
-        dynamodb_service.add_integration(
+        dynamodb_service.modify_integration_status(
             org_id=integration_request.organization_id,
             account_token=account_token,
-            status="INDEXING",
+            status=IntegrationStatus.INDEXING,
         )
 
         data_pipeline_service = DataPipelineService(
@@ -50,15 +51,15 @@ def initiate_file_processing(
             account_token,
             str(e),
         )
-        dynamodb_service.add_integration(
+        dynamodb_service.modify_integration_status(
             org_id=integration_request.organization_id,
             account_token=account_token,
-            status="FAILED",
+            status=IntegrationStatus.FAIL,
         )
         return
 
-    dynamodb_service.add_integration(
+    dynamodb_service.modify_integration_status(
         org_id=integration_request.organization_id,
         account_token=account_token,
-        status="SUCCESS",
+        status=IntegrationStatus.SUCCESS,
     )

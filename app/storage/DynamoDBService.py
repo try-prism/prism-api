@@ -12,6 +12,7 @@ from constants import (
     DYNAMODB_USER_TABLE,
     DYNAMODB_WHITELIST_TABLE,
 )
+from enums import IntegrationStatus
 from exceptions import PrismDBException, PrismDBExceptionCode
 from merge.resources.filestorage.types import File
 from models import (
@@ -25,6 +26,7 @@ from models import (
     to_user_model,
     to_whitelist_model,
 )
+from storage import MergeService
 
 logger = logging.getLogger(__name__)
 
@@ -365,19 +367,55 @@ class DynamoDBService:
                 message="User does not exist",
             )
 
-    def add_integration(self, org_id: str, account_token: str, status: str) -> None:
+    def add_integration(self, org_id: str, account_token: str) -> None:
+        merge_service = MergeService(account_token=account_token)
+
         response = self.get_organization(org_id)
         org_item = to_organization_model(response)
 
         timestamp = str(time.time())
         link_id_map = org_item.link_id_map
+
+        integration_provider = merge_service.get_integration_provider()
+
         link_id_map[account_token] = {
             "M": {
-                "source": {"S": "UNKNOWN"},
+                "id": {"S": integration_provider.id or ""},
+                "integration": {"S": integration_provider.integration or ""},
+                "integration_slug": {"S": integration_provider.integration_slug or ""},
+                "category": {"S": integration_provider.category.value or ""},
+                "end_user_origin_id": {
+                    "S": integration_provider.end_user_origin_id or ""
+                },
+                "end_user_organization_name": {
+                    "S": integration_provider.end_user_organization_name or ""
+                },
+                "end_user_email_address": {
+                    "S": integration_provider.end_user_email_address or ""
+                },
+                "webhook_listener_url": {
+                    "S": integration_provider.webhook_listener_url or ""
+                },
                 "created": {"S": timestamp},
-                "status": {"S": status},
+                "status": {"S": IntegrationStatus.SYNCING.value},
             }
         }
+
+        self.update_item(
+            DYNAMODB_ORGANIZATION_TABLE,
+            get_organization_key(org_id),
+            field_name="link_id_map",
+            field_value=link_id_map,
+        )
+
+    def modify_integration_status(
+        self, org_id: str, account_token: str, status: IntegrationStatus
+    ) -> None:
+        response = self.get_organization(org_id)
+        org_item = to_organization_model(response)
+
+        link_id_map = org_item.link_id_map
+        link_id_map[account_token]["M"]["status"]["S"] = status.value
 
         self.update_item(
             DYNAMODB_ORGANIZATION_TABLE,
