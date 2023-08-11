@@ -485,6 +485,8 @@ class DynamoDBService:
         )
 
     def get_all_file_ids_for_integration(self, account_token: str) -> list[str]:
+        logger.info("account_token: %s", account_token)
+
         ids = []
         table = self.resource.Table(DYNAMODB_FILE_TABLE)
 
@@ -515,6 +517,8 @@ class DynamoDBService:
         return cleaned_ids
 
     def change_org_admin(self, org_id: str, new_admin_id: str) -> None:
+        logger.info("org_id=%s, new_admin_id=%s", org_id, new_admin_id)
+
         organization = self.get_organization(org_id)
 
         if organization.admin_id != new_admin_id:

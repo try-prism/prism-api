@@ -12,7 +12,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 
 log_format = (
-    "%(asctime)s::%(levelname)s::%(name)s::" "%(filename)s::%(lineno)d::%(message)s"
+    "%(asctime)s::%(levelname)s::%(name)s "
+    "[%(filename)s::%(lineno)d::%(funcName)20s()] %(message)s"
 )
 logging.basicConfig(level=logging.INFO, format=log_format)
 
