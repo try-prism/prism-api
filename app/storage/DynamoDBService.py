@@ -446,22 +446,28 @@ class DynamoDBService:
         ids = []
         table = self.resource.Table(DYNAMODB_FILE_TABLE)
 
-        response = table.query(
-            Select="SPECIFIC_ATTRIBUTES",
-            AttributesToGet=["id"],
-            KeyConditionExpression=Key("account_token").eq(account_token),
-        )
-        ids.extend(response["Items"])
-
-        while "LastEvaluatedKey" in response:
+        try:
             response = table.query(
                 Select="SPECIFIC_ATTRIBUTES",
                 AttributesToGet=["id"],
                 KeyConditionExpression=Key("account_token").eq(account_token),
-                ExclusiveStartKey=response["LastEvaluatedKey"],
             )
             ids.extend(response["Items"])
 
-        cleaned_ids = [i["id"]["S"] for i in ids]
+            while "LastEvaluatedKey" in response:
+                response = table.query(
+                    Select="SPECIFIC_ATTRIBUTES",
+                    AttributesToGet=["id"],
+                    KeyConditionExpression=Key("account_token").eq(account_token),
+                    ExclusiveStartKey=response["LastEvaluatedKey"],
+                )
+                ids.extend(response["Items"])
+        except ClientError as e:
+            logger.error("account_token: %s, error=%s", account_token, str(e))
+            raise PrismDBException(
+                code=PrismDBExceptionCode.ITEM_BATCH_GET_ERROR,
+                message="Failed to retrieve all file ids related to the integration",
+            )
 
+        cleaned_ids = [i["id"]["S"] for i in ids]
         return cleaned_ids

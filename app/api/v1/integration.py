@@ -192,17 +192,17 @@ async def remove_integration_detail(
         logger.error(str(e))
         return ErrorDTO(code=HTTPStatus.FORBIDDEN.value, description=str(e))
 
-    # Remove data related to this integration from file database
-    related_file_ids = dynamodb_service.get_all_file_ids_for_integration(
-        account_token=integration_account_token
-    )
-    dynamodb_service.remove_file_in_batch(related_file_ids)
-
-    # Remove data related to this integration from vector store
-    data_index_service.delete_nodes(related_file_ids)
-
-    # Remove data related to this integration from organization database
     try:
+        # Remove data related to this integration from file database
+        related_file_ids = dynamodb_service.get_all_file_ids_for_integration(
+            account_token=integration_account_token
+        )
+        dynamodb_service.remove_file_in_batch(related_file_ids)
+
+        # Remove data related to this integration from vector store
+        data_index_service.delete_nodes(related_file_ids)
+
+        # Remove data related to this integration from organization database
         dynamodb_service.modify_organization_files(
             org_id=org_id, file_ids=related_file_ids, is_remove=True
         )
