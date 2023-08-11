@@ -425,25 +425,12 @@ class DynamoDBService:
         else:
             temp_file_set.update(file_ids)
 
-        try:
-            self.update_item(
-                DYNAMODB_ORGANIZATION_TABLE,
-                get_organization_key(org_id),
-                field_name="document_list",
-                field_value=list(temp_file_set),
-            )
-        except ClientError as e:
-            logger.error(
-                "org_id=%s, len(file_ids)=%s, is_remove=%s, error=%s",
-                org_id,
-                len(file_ids),
-                is_remove,
-                str(e),
-            )
-            raise PrismDBException(
-                code=PrismDBExceptionCode.ITEM_BATCH_PROCESS_ERROR,
-                message="Failed to modify organization files in batch",
-            )
+        self.update_item(
+            DYNAMODB_ORGANIZATION_TABLE,
+            get_organization_key(org_id),
+            field_name="document_list",
+            field_value=list(temp_file_set),
+        )
 
     def modify_file_in_batch(
         self,
