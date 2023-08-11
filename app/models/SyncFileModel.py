@@ -1,5 +1,6 @@
 from enums import FileOperation
 from pydantic import BaseModel
+from utils import deserialize
 
 
 class SyncFileModel(BaseModel):
@@ -8,7 +9,11 @@ class SyncFileModel(BaseModel):
 
 
 def to_sync_file_model(response: dict) -> SyncFileModel:
+    item = deserialize(response)
+
     return SyncFileModel(
-        id=response.get("id", {"S": ""})["S"],
-        operation=FileOperation(response.get("operation", {"S": "UPDATED"})["S"]),
+        id=item.get("id", ""),
+        operation=FileOperation(
+            response.get("operation", FileOperation.UPDATED.value),
+        ),
     )

@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from utils import deserialize
 
 from .AccessControlModel import AccessControlModel, to_access_control_model
 
@@ -14,18 +15,16 @@ class UserModel(BaseModel):
 
 
 def to_user_model(response: dict) -> UserModel:
-    item: dict = response["Item"]
+    item = deserialize(response["Item"])
 
     return UserModel(
-        id=item.get("id", {"S": ""})["S"],
-        email=item.get("email", {"S": ""})["S"],
-        name=item.get("name", {"S": ""})["S"],
-        organization_id=item.get("organization_id", {"S": ""})["S"],
-        access_control=to_access_control_model(
-            item.get("access_control", {"M", {}})["M"]
-        ),
-        created_at=item.get("created_at", {"S": ""})["S"],
-        updated_at=item.get("updated_at", {"S": ""})["S"],
+        id=item.get("id", ""),
+        email=item.get("email", ""),
+        name=item.get("name", ""),
+        organization_id=item.get("organization_id", ""),
+        access_control=to_access_control_model(item.get("access_control", {})),
+        created_at=item.get("created_at", ""),
+        updated_at=item.get("updated_at", ""),
     )
 
 

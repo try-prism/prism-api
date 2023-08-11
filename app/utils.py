@@ -1,4 +1,5 @@
 """General utils functions."""
+from boto3.dynamodb.types import TypeDeserializer, TypeSerializer
 
 
 def divide_list(target_list: list, item_size: int) -> list[list]:
@@ -9,3 +10,13 @@ def divide_list(target_list: list, item_size: int) -> list[list]:
         res[i // item_size] = target_list[i : i + item_size]
 
     return res
+
+
+def serialize(object: dict) -> dict:
+    serializer = TypeSerializer()
+    return {k: serializer.serialize(v) for k, v in object.items()}
+
+
+def deserialize(object: dict) -> dict:
+    deserializer = TypeDeserializer()
+    return {k: deserializer.deserialize(v) for k, v in object.items()}

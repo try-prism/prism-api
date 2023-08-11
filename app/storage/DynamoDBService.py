@@ -5,7 +5,6 @@ from typing import Any
 
 import boto3
 from boto3.dynamodb.conditions import Key
-from boto3.dynamodb.types import TypeDeserializer, TypeSerializer
 from botocore.exceptions import ClientError
 from constants import (
     DYNAMODB_FILE_TABLE,
@@ -28,6 +27,7 @@ from models import (
     to_whitelist_model,
 )
 from storage import MergeService
+from utils import serialize
 
 logger = logging.getLogger(__name__)
 
@@ -64,14 +64,6 @@ class DynamoDBService:
     def __init__(self):
         self.client = boto3.client("dynamodb")
         self.resource = boto3.resource("dynamodb")
-        self.serializer = TypeSerializer()
-        self.deserializer = TypeDeserializer()
-
-    def serialize(self, object: dict) -> dict:
-        return {k: self.serializer.serialize(v) for k, v in object.items()}
-
-    def deserialize(self, object: dict) -> dict:
-        return {k: self.deserializer.deserialize(v) for k, v in object.items()}
 
     def put_item(self, table_name: str, item: dict) -> None:
         try:
@@ -390,7 +382,7 @@ class DynamoDBService:
         integration_item["created"] = timestamp
         integration_item["status"] = IntegrationStatus.SYNCING.value
 
-        link_id_map[account_token] = {"M": self.serialize(integration_item)}
+        link_id_map[account_token] = {"M": serialize(integration_item)}
 
         self.update_item(
             DYNAMODB_ORGANIZATION_TABLE,
@@ -458,7 +450,7 @@ class DynamoDBService:
             for file in files:
                 new_file = file.dict()
                 new_file["account_token"] = account_token
-                file_item = self.serialize(new_file)
+                file_item = serialize(new_file)
                 items.append(file_item)
 
         self.optimized_batch_write(
