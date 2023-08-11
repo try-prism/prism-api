@@ -1,12 +1,8 @@
 import logging
-import time
 from http import HTTPStatus
 
-from botocore.exceptions import ClientError
-from constants import DYNAMODB_ORGANIZATION_TABLE
 from exceptions import PrismDBException, PrismException, PrismMergeException
 from fastapi import APIRouter, BackgroundTasks, Header
-from models import get_organization_key
 from models.RequestModels import IntegrationRequest
 from models.ResponseModels import (
     ErrorDTO,
@@ -109,24 +105,18 @@ async def get_integration_detail(
 
     # Retrieve organization's integration details
     dynamodb_service = DynamoDBService()
-    try:
-        organization = dynamodb_service.get_organization(org_id)
-    except PrismDBException as e:
-        logger.error("org_id=%s, error=%s", org_id, e)
-        return ErrorDTO(code=e.code, description=e.message)
 
     try:
+        organization = dynamodb_service.get_organization(org_id)
         link_id_map = organization.link_id_map
         logger.info("org_id=%s, link_id_map=%s", org_id, link_id_map)
+
         return IntegrationDetailResponse(
             status=HTTPStatus.OK.value, integrations=link_id_map
         )
-    except ClientError as e:
-        logger.error(str(e))
-        return ErrorDTO(
-            code=HTTPStatus.BAD_REQUEST.value,
-            description=str(e),
-        )
+    except PrismDBException as e:
+        logger.error("org_id=%s, error=%s", org_id, e)
+        return ErrorDTO(code=e.code, description=e.message)
 
 
 @router.delete(
@@ -158,40 +148,10 @@ async def remove_integration_detail(
 
     try:
         # Remove organization's integration detail
-        organization = dynamodb_service.get_organization(org_id)
-    except PrismDBException as e:
-        logger.error(
-            "org_id=%s, integration_account_token=%s, error=%s",
-            org_id,
-            integration_account_token,
-            e,
+        dynamodb_service.remove_integration(
+            org_id=org_id, account_token=integration_account_token
         )
-        return ErrorDTO(code=e.code, description=e.message)
 
-    timestamp = str(time.time())
-
-    try:
-        link_id_map = organization.link_id_map
-        logger.info("org_id=%s, link_id_map=%s", org_id, link_id_map)
-        del link_id_map[integration_account_token]
-
-        dynamodb_service.client.update_item(
-            TableName=DYNAMODB_ORGANIZATION_TABLE,
-            Key=get_organization_key(org_id),
-            UpdateExpression="SET link_id_map = :map, updated_at = :ua",
-            ExpressionAttributeValues={
-                ":map": {"M": link_id_map},
-                ":ua": {"S": timestamp},
-            },
-        )
-    except ClientError as e:
-        logger.error(str(e))
-        return ErrorDTO(code=HTTPStatus.FORBIDDEN.value, description=str(e))
-    except Exception as e:
-        logger.error(str(e))
-        return ErrorDTO(code=HTTPStatus.FORBIDDEN.value, description=str(e))
-
-    try:
         # Remove data related to this integration from file database
         related_file_ids = dynamodb_service.get_all_file_ids_for_integration(
             account_token=integration_account_token

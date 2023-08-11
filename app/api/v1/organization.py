@@ -1,13 +1,9 @@
 import logging
-import time
 import uuid
 from http import HTTPStatus
 
-from botocore.exceptions import ClientError
-from constants import DYNAMODB_ORGANIZATION_TABLE
 from exceptions import PrismDBException, PrismException
 from fastapi import APIRouter
-from models import get_organization_key
 from models.RequestModels import (
     CancelInviteUserOrganizationRequest,
     InviteUserOrganizationRequest,
@@ -199,7 +195,7 @@ async def get_organization(
 async def update_organization(org_id: str, update_request: UpdateOrganizationRequest):
     if (
         not org_id
-        or not update_request.organization_admin_id
+        or not update_request.new_organization_admin_id
         or update_request.prev_organization_admin_id
     ):
         logger.error(
@@ -217,39 +213,16 @@ async def update_organization(org_id: str, update_request: UpdateOrganizationReq
     dynamodb_service = DynamoDBService()
 
     try:
-        organization = dynamodb_service.get_organization(org_id)
+        dynamodb_service.change_org_admin(
+            org_id=org_id, new_admin_id=update_request.new_organization_admin_id
+        )
     except PrismDBException as e:
-        logger.error("org_id=%s, update_request=%s error=%s", org_id, update_request, e)
-        return ErrorDTO(code=e.code, description=e.message)
-
-    timestamp = str(time.time())
-
-    if organization.admin_id != update_request.prev_organization_admin_id:
         logger.error(
-            "org_id=%s, update_request=%s error=no permission to edit this organization",
-            org_id,
-            update_request,
+            "org_id=%s, update_request=%s, error=%s", org_id, update_request, e
         )
         return ErrorDTO(
-            code=HTTPStatus.FORBIDDEN.value,
-            description="You don't have permission to edit this organization",
-        )
-
-    try:
-        dynamodb_service.client.update_item(
-            TableName=DYNAMODB_ORGANIZATION_TABLE,
-            Key=get_organization_key(org_id),
-            UpdateExpression="SET admin_id = :id, updated_at = :ua",
-            ExpressionAttributeValues={
-                ":id": {"M": org_id},
-                ":ua": {"S": timestamp},
-            },
-        )
-    except ClientError as e:
-        logger.error(str(e))
-        return ErrorDTO(
-            code=HTTPStatus.BAD_REQUEST.value,
-            description=str(e),
+            code=e.code,
+            description=e.message,
         )
 
     return UpdateOrganizationResponse(status=HTTPStatus.OK.value)
