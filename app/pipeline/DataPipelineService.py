@@ -5,7 +5,7 @@ from typing import IO
 
 import ray
 from constants import PRISM_ENV, RAY_ADDRESS, RAY_RUNTIME_ENV
-from exceptions import PrismException
+from exceptions import PrismDBException, PrismException
 from llama_index import Document
 from llama_index.node_parser import SimpleNodeParser
 from llama_index.schema import BaseNode, TextNode
@@ -32,6 +32,7 @@ class DataPipelineService:
         self.process_date = str(
             datetime.datetime(current_date.year, current_date.month, current_date.day)
         )
+        self.not_processed_file_ids: list[str] = []
 
         if not ray.is_initialized():
             logger.info("Connecting to the ray cluster. ENV=%s", PRISM_ENV)
@@ -57,6 +58,23 @@ class DataPipelineService:
 
     def get_embedded_nodes(self, all_files: list[File]) -> Sequence[BaseNode]:
         loaded_docs = self.load_data(all_files)
+
+        # remove not processed files from the database and organization
+        try:
+            self.dynamodb_service.modify_organization_files(
+                org_id=self.org_id, file_ids=self.not_processed_file_ids, is_remove=True
+            )
+            self.dynamodb_service.modify_file_in_batch(
+                file_ids=self.not_processed_file_ids, is_remove=True
+            )
+        except PrismDBException as e:
+            logger.error(
+                "org_id=%s, account_token=%s, error=%s",
+                self.org_id,
+                self.account_token,
+                e,
+            )
+
         nodes = self.generate_nodes(loaded_docs)
         embeddings = self.generate_embeddings(nodes)
 
@@ -80,16 +98,10 @@ class DataPipelineService:
                 "process_date": self.process_date,
             }
 
-            # TODO: think of a better way to batch process this
-            self.dynamodb_service.modify_organization_files(
-                org_id=self.org_id, file_ids=[file_row["data"].id], is_remove=False
-            )
-            self.dynamodb_service.add_file(
-                file=file_row["data"], account_token=self.account_token
-            )
             documents.extend(loaded_doc)
         except PrismException as e:
             logger.error("file_row=%s, error=%s", file_row, e)
+            self.not_processed_file_ids.append(file_row["data"].id)
 
         return [{"doc": doc} for doc in documents]
 
@@ -98,6 +110,23 @@ class DataPipelineService:
 
         # Get the file data from all files & Create the Ray Dataset pipeline
         all_items = [{"data": file} for file in all_files]
+        all_file_ids = [file.id for file in all_files]
+
+        try:
+            self.dynamodb_service.modify_organization_files(
+                org_id=self.org_id, file_ids=all_file_ids, is_remove=False
+            )
+            self.dynamodb_service.modify_file_in_batch(
+                account_token=self.account_token, files=all_files, is_remove=False
+            )
+        except PrismDBException as e:
+            logger.error(
+                "org_id=%s, account_token=%s, error=%s",
+                self.org_id,
+                self.account_token,
+                e,
+            )
+
         ds: MaterializedDataset = from_items(all_items)
 
         # Use `flat_map` since there is a 1:N relationship.

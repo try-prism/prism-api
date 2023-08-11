@@ -196,7 +196,7 @@ async def remove_integration_detail(
         related_file_ids = dynamodb_service.get_all_file_ids_for_integration(
             account_token=integration_account_token
         )
-        dynamodb_service.remove_file_in_batch(related_file_ids)
+        dynamodb_service.modify_file_in_batch(file_ids=related_file_ids, is_remove=True)
 
         # Remove data related to this integration from vector store
         data_index_service.delete_nodes(related_file_ids)

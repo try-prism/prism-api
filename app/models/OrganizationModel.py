@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from utils import deserialize
 
 
 class OrganizationModel(BaseModel):
@@ -15,19 +16,19 @@ class OrganizationModel(BaseModel):
 
 
 def to_organization_model(response: dict) -> OrganizationModel:
-    item: dict = response["Item"]
+    item = deserialize(response["Item"])
 
     return OrganizationModel(
-        id=item.get("id", {"S": ""})["S"],
-        name=item.get("name", {"S": ""})["S"],
-        email=item.get("email", {"S": ""})["S"],
-        admin_id=item.get("admin_id", {"S": ""})["S"],
-        user_list=item.get("user_list", {"L": []})["L"],
-        invited_user_list=item.get("invited_user_list", {"L": []})["L"],
-        link_id_map=item.get("link_id_map", {"M": {}})["M"],
-        document_list=item.get("document_list", {"L": []})["L"],
-        created_at=item.get("created_at", {"S": ""})["S"],
-        updated_at=item.get("updated_at", {"S": ""})["S"],
+        id=item.get("id", ""),
+        name=item.get("name", ""),
+        email=item.get("email", ""),
+        admin_id=item.get("admin_id", ""),
+        user_list=item.get("user_list", []),
+        invited_user_list=item.get("invited_user_list", []),
+        link_id_map=item.get("link_id_map", {}),
+        document_list=item.get("document_list", []),
+        created_at=item.get("created_at", ""),
+        updated_at=item.get("updated_at", ""),
     )
 
 

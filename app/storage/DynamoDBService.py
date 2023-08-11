@@ -27,6 +27,7 @@ from models import (
     to_whitelist_model,
 )
 from storage import MergeService
+from utils import serialize
 
 logger = logging.getLogger(__name__)
 
@@ -125,9 +126,9 @@ class DynamoDBService:
                 batch.delete_item(Key=keys[i])
 
     def parallel_batch_write(
-        self, table_name: str, items: list[dict], is_delete: bool
+        self, table_name: str, items: list[dict], is_remove: bool
     ) -> None:
-        ops = self.batch_delete if is_delete else self.batch_write
+        ops = self.batch_delete if is_remove else self.batch_write
 
         with ThreadPoolExecutor(max_workers=4) as executor:
             futures = [
@@ -140,10 +141,10 @@ class DynamoDBService:
 
     @exponential_backoff
     def optimized_batch_write(
-        self, table_name: str, items: list[dict], is_delete: bool
+        self, table_name: str, items: list, is_remove: bool
     ) -> None:
         self.parallel_batch_write(
-            table_name=table_name, items=items, is_delete=is_delete
+            table_name=table_name, items=items, is_remove=is_remove
         )
 
     def update_item(
@@ -377,29 +378,11 @@ class DynamoDBService:
         link_id_map = org_item.link_id_map
 
         integration_provider = merge_service.get_integration_provider()
+        integration_item = integration_provider.dict()
+        integration_item["created"] = timestamp
+        integration_item["status"] = IntegrationStatus.SYNCING.value
 
-        link_id_map[account_token] = {
-            "M": {
-                "id": {"S": integration_provider.id or ""},
-                "integration": {"S": integration_provider.integration or ""},
-                "integration_slug": {"S": integration_provider.integration_slug or ""},
-                "category": {"S": integration_provider.category.value or ""},
-                "end_user_origin_id": {
-                    "S": integration_provider.end_user_origin_id or ""
-                },
-                "end_user_organization_name": {
-                    "S": integration_provider.end_user_organization_name or ""
-                },
-                "end_user_email_address": {
-                    "S": integration_provider.end_user_email_address or ""
-                },
-                "webhook_listener_url": {
-                    "S": integration_provider.webhook_listener_url or ""
-                },
-                "created": {"S": timestamp},
-                "status": {"S": IntegrationStatus.SYNCING.value},
-            }
-        }
+        link_id_map[account_token] = {"M": serialize(integration_item)}
 
         self.update_item(
             DYNAMODB_ORGANIZATION_TABLE,
@@ -445,40 +428,48 @@ class DynamoDBService:
             field_value=list(temp_file_set),
         )
 
-    def add_file(self, file: File, account_token: str) -> None:
-        new_file = {
-            "id": {"S": file.id or ""},
-            "remote_id": {"S": file.remote_id or ""},
-            "name": {"S": file.name or ""},
-            "file_url": {"S": file.file_url or ""},
-            "file_thumbnail_url": {"S": file.file_thumbnail_url or ""},
-            "size": {"N": file.size or 0},
-            "mime_type": {"S": file.mime_type or ""},
-            "description": {"S": file.description or ""},
-            "folder": {"S": file.folder or ""},
-            "permissions": {"L": file.permissions or []},
-            "drive": {"S": file.drive or ""},
-            "remote_created_at": {"S": file.remote_created_at or ""},
-            "remote_updated_at": {"S": file.remote_updated_at or ""},
-            "remote_was_deleted": {"BOOL": file.remote_was_deleted or False},
-            "modified_at": {"S": file.modified_at or ""},
-            "field_mappings": {"M": file.field_mappings or {}},
-            "remote_data": {"L": file.remote_data or []},
-            # Custom fields
-            "account_token": {"S": account_token},
-        }
+    def modify_file_in_batch(
+        self,
+        account_token: str | None,
+        file_ids: list[str] | None,
+        files: list[File] | None,
+        is_remove: bool,
+    ) -> None:
+        if is_remove and not account_token:
+            raise PrismDBException(
+                code=PrismDBExceptionCode.INVALID_ARGUMENT,
+                message="account_token is required when removing files",
+            )
 
-        self.put_item(DYNAMODB_FILE_TABLE, new_file)
-
-    def remove_file_in_batch(self, file_ids: list[str]) -> None:
-        logger.info(f"Removing {len(file_ids)} files in batch")
-
-        keys = [get_file_key(file_id) for file_id in file_ids]
-        self.optimized_batch_write(
-            table_name=DYNAMODB_FILE_TABLE, items=keys, is_delete=True
+        logger.info(
+            "Modifying file(s). account_token: %s, len(file_ids)=%s, len(files)=%s, is_remove=%s",
+            account_token,
+            len(file_ids),
+            len(files),
+            is_remove,
         )
 
-        logger.info(f"Removed {len(file_ids)} files in batch")
+        if is_remove:
+            items = [get_file_key(file_id) for file_id in file_ids]
+        else:
+            items = []
+            for file in files:
+                new_file = file.dict()
+                new_file["account_token"] = account_token
+                file_item = serialize(new_file)
+                items.append(file_item)
+
+        self.optimized_batch_write(
+            table_name=DYNAMODB_FILE_TABLE, items=items, is_remove=is_remove
+        )
+
+        logger.info(
+            "Finished modifying. account_token: %s, len(file_ids)=%s, len(files)=%s, is_remove=%s",
+            account_token,
+            len(file_ids),
+            len(files),
+            is_remove,
+        )
 
     def get_all_file_ids_for_integration(self, account_token: str) -> list[str]:
         ids = []

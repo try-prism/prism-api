@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from utils import deserialize
 
 
 class WhitelistModel(BaseModel):
@@ -9,11 +10,11 @@ class WhitelistModel(BaseModel):
 
 
 def to_whitelist_model(response: dict) -> WhitelistModel:
-    item: dict = response["Item"]
+    item = deserialize(response["Item"])
 
     return WhitelistModel(
-        id=item.get("id", {"S": ""})["S"],
-        org_name=item.get("org_name", {"S": ""})["S"],
-        org_id=item.get("org_id", {"S": ""})["S"],
-        created_at=item.get("created_at", {"S": ""})["S"],
+        id=item.get("id", ""),
+        org_name=item.get("org_name", ""),
+        org_id=item.get("org_id", ""),
+        created_at=item.get("created_at", ""),
     )

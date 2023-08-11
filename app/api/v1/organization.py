@@ -119,7 +119,9 @@ async def remove_organization(
         )
 
         # Remove file data from the database
-        dynamodb_service.remove_file_in_batch(organization.document_list)
+        dynamodb_service.modify_file_in_batch(
+            file_ids=organization.document_list, is_remove=True
+        )
 
         # Remove users
         for id in organization.user_list:

@@ -76,7 +76,7 @@ async def sync_organization_data(
         dynamodb_service.modify_organization_files(
             org_id=org_id, file_ids=remove_ids, is_remove=True
         )
-        dynamodb_service.remove_file_in_batch(remove_ids)
+        dynamodb_service.modify_file_in_batch(file_ids=remove_ids, is_remove=True)
 
         # Get files
         for batch in file_id_batch:
