@@ -5,6 +5,7 @@ from typing import Any
 
 import boto3
 from boto3.dynamodb.conditions import Key
+from boto3.dynamodb.types import TypeSerializer
 from botocore.exceptions import ClientError
 from constants import (
     DYNAMODB_FILE_TABLE,
@@ -63,6 +64,10 @@ class DynamoDBService:
     def __init__(self):
         self.client = boto3.client("dynamodb")
         self.resource = boto3.resource("dynamodb")
+        self.serializer = TypeSerializer()
+
+    def serialize(self, object: dict) -> dict:
+        return {k: self.serializer.serialize(v) for k, v in object.items()}
 
     def put_item(self, table_name: str, item: dict) -> None:
         try:
@@ -377,29 +382,11 @@ class DynamoDBService:
         link_id_map = org_item.link_id_map
 
         integration_provider = merge_service.get_integration_provider()
+        integration_item = integration_provider.dict()
+        integration_item["created"] = timestamp
+        integration_item["status"] = IntegrationStatus.SYNCING.value
 
-        link_id_map[account_token] = {
-            "M": {
-                "id": {"S": integration_provider.id or ""},
-                "integration": {"S": integration_provider.integration or ""},
-                "integration_slug": {"S": integration_provider.integration_slug or ""},
-                "category": {"S": integration_provider.category.value or ""},
-                "end_user_origin_id": {
-                    "S": integration_provider.end_user_origin_id or ""
-                },
-                "end_user_organization_name": {
-                    "S": integration_provider.end_user_organization_name or ""
-                },
-                "end_user_email_address": {
-                    "S": integration_provider.end_user_email_address or ""
-                },
-                "webhook_listener_url": {
-                    "S": integration_provider.webhook_listener_url or ""
-                },
-                "created": {"S": timestamp},
-                "status": {"S": IntegrationStatus.SYNCING.value},
-            }
-        }
+        link_id_map[account_token] = {"M": self.serialize(integration_item)}
 
         self.update_item(
             DYNAMODB_ORGANIZATION_TABLE,
@@ -446,29 +433,11 @@ class DynamoDBService:
         )
 
     def add_file(self, file: File, account_token: str) -> None:
-        new_file = {
-            "id": {"S": file.id or ""},
-            "remote_id": {"S": file.remote_id or ""},
-            "name": {"S": file.name or ""},
-            "file_url": {"S": file.file_url or ""},
-            "file_thumbnail_url": {"S": file.file_thumbnail_url or ""},
-            "size": {"N": file.size or 0},
-            "mime_type": {"S": file.mime_type or ""},
-            "description": {"S": file.description or ""},
-            "folder": {"S": file.folder or ""},
-            "permissions": {"L": file.permissions or []},
-            "drive": {"S": file.drive or ""},
-            "remote_created_at": {"S": file.remote_created_at or ""},
-            "remote_updated_at": {"S": file.remote_updated_at or ""},
-            "remote_was_deleted": {"BOOL": file.remote_was_deleted or False},
-            "modified_at": {"S": file.modified_at or ""},
-            "field_mappings": {"M": file.field_mappings or {}},
-            "remote_data": {"L": file.remote_data or []},
-            # Custom fields
-            "account_token": {"S": account_token},
-        }
+        new_file = file.dict()
+        new_file["account_token"] = account_token
+        file_item = self.serialize(new_file)
 
-        self.put_item(DYNAMODB_FILE_TABLE, new_file)
+        self.put_item(DYNAMODB_FILE_TABLE, file_item)
 
     def remove_file_in_batch(self, file_ids: list[str]) -> None:
         logger.info(f"Removing {len(file_ids)} files in batch")
