@@ -441,7 +441,13 @@ class DynamoDBService:
                 message="account_token is required when removing files",
             )
 
-        logger.info(f"Modifying {len(file_ids)} files in batch")
+        logger.info(
+            "Modifying file(s). account_token: %s, len(file_ids)=%s, len(files)=%s, is_remove=%s",
+            account_token,
+            len(file_ids),
+            len(files),
+            is_remove,
+        )
 
         if is_remove:
             items = [get_file_key(file_id) for file_id in file_ids]
@@ -457,7 +463,13 @@ class DynamoDBService:
             table_name=DYNAMODB_FILE_TABLE, items=items, is_remove=is_remove
         )
 
-        logger.info(f"Modified {len(file_ids)} files in batch")
+        logger.info(
+            "Finished modifying. account_token: %s, len(file_ids)=%s, len(files)=%s, is_remove=%s",
+            account_token,
+            len(file_ids),
+            len(files),
+            is_remove,
+        )
 
     def get_all_file_ids_for_integration(self, account_token: str) -> list[str]:
         ids = []
