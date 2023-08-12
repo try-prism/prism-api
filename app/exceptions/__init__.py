@@ -1,13 +1,12 @@
-from .PrismAPIException import PrismAPIException
 from .PrismDBException import PrismDBException, PrismDBExceptionCode
 from .PrismEmailException import PrismEmailException, PrismEmailExceptionCode
-from .PrismException import PrismException
+from .PrismException import PrismException, PrismExceptionCode
 from .PrismIdentityException import PrismIdentityException, PrismIdentityExceptionCode
 from .PrismMergeException import PrismMergeException, PrismMergeExceptionCode
 
 __all__ = [
-    "PrismAPIException",
     "PrismException",
+    "PrismExceptionCode",
     "PrismDBException",
     "PrismDBExceptionCode",
     "PrismEmailException",
