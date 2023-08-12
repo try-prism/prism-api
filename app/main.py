@@ -15,10 +15,16 @@ from fastapi.openapi.utils import get_openapi
 from fastapi.responses import JSONResponse
 from loguru import logger
 
-# logger.
-logger.remove(0)
-logger.add(sys.stderr, format="{time} {level} {message}", level="INFO")
-# logger.add("info.log", filter=lambda record: record["level"].name == "INFO")
+logger.remove()
+logger.add(
+    sys.stderr,
+    format=(
+        "<green>{time:YYYY-MM-DD HH:mm:ss.SSS!UTC}</green> "
+        "| <level>{level: <5}</level> | <cyan>{file}</cyan>:<cyan>{line}</cyan> "
+        "<yellow>{function}</yellow> - <level>{message}</level>"
+    ),
+    level="INFO",
+)
 
 
 app = FastAPI()
