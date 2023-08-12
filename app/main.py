@@ -41,7 +41,7 @@ app.add_middleware(
 async def prism_api_exception_handler(request: Request, e: PrismException):
     return JSONResponse(
         status_code=HTTPStatus.BAD_REQUEST.value,
-        content={"code": e.code, "message": e.message},
+        content={"code": e.code.value, "message": e.message},
     )
 
 
