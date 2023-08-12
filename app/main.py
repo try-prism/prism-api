@@ -10,6 +10,8 @@ from api.v1 import (
 )
 from exceptions import PrismException
 from fastapi import FastAPI, Request
+from fastapi.encoders import jsonable_encoder
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 from fastapi.responses import JSONResponse
@@ -42,6 +44,14 @@ async def prism_api_exception_handler(request: Request, e: PrismException):
     return JSONResponse(
         status_code=HTTPStatus.BAD_REQUEST.value,
         content={"code": e.code.value, "message": e.message},
+    )
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    return JSONResponse(
+        status_code=HTTPStatus.UNPROCESSABLE_ENTITY.value,
+        content=jsonable_encoder({"detail": exc.errors(), "body": exc.body}),
     )
 
 
