@@ -25,13 +25,13 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 """
-| Endpoint             | Description                          | Method |
-|----------------------|--------------------------------------|--------|
-| `/user`              | Register a new user                  | POST   |
-| `/user/{id}`         | Retrieve a user's details            | GET    |
-| `/user/{id}`         | Update a user's details (*)          | PATCH  |
-| `/user/{id}`         | Delete a user's account              | DELETE |
-| `/invitation/{id}`   | Get invitation data from whitelist   | GET    |
+| Endpoint                  | Description                          | Method |
+|---------------------------|--------------------------------------|--------|
+| `/user`                   | Register a new user                  | POST   |
+| `/user/{id}`              | Retrieve a user's details            | GET    |
+| `/user/{id}`              | Update a user's details (*)          | PATCH  |
+| `/user/{id}`              | Delete a user's account              | DELETE |
+| `/user/{id}/invitation`   | Get invitation data from whitelist   | GET    |
 """
 
 
@@ -173,7 +173,7 @@ async def delete_user(id: str, org_admin_id: str = Header()):
 
 
 @router.get(
-    "/invitation/{id}",
+    "/user/{id}/invitation",
     summary="Get invitation data from whitelist",
     tags=["User"],
     response_model=GetInvitationResponse,

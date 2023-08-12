@@ -169,8 +169,8 @@ class DataPipelineService:
             batch_size=100,
             # Use 1 GPU per actor.
             num_gpus=1,
-            # There are 4 GPUs in the cluster. Each actor uses 1 GPU. So we want 4 total actors.
-            compute=ActorPoolStrategy(size=4),
+            # There are 2 GPUs in the cluster. Each actor uses 1 GPU. So we want 2 total actors.
+            compute=ActorPoolStrategy(size=2),
         )
 
         # Trigger execution and collect all the embedded nodes.
