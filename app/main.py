@@ -8,7 +8,7 @@ from api.v1 import (
     sync_router,
     user_router,
 )
-from exceptions import PrismAPIException
+from exceptions import PrismException
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
@@ -37,8 +37,8 @@ app.add_middleware(
 )
 
 
-@app.exception_handler(PrismAPIException)
-async def prism_api_exception_handler(request: Request, e: PrismAPIException):
+@app.exception_handler(PrismException)
+async def prism_api_exception_handler(request: Request, e: PrismException):
     return JSONResponse(
         status_code=HTTPStatus.BAD_REQUEST.value,
         content={"code": e.code, "message": e.message},

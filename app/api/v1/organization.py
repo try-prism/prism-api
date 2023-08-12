@@ -1,7 +1,7 @@
 import uuid
 from http import HTTPStatus
 
-from exceptions import PrismAPIException, PrismDBException, PrismException
+from exceptions import PrismDBException, PrismException
 from fastapi import APIRouter
 from loguru import logger
 from models.RequestModels import (
@@ -57,7 +57,7 @@ async def register_organization(
         or not register_request.organization_email
         or not register_request.organization_admin_id
     ):
-        raise PrismAPIException(
+        raise PrismException(
             code=HTTPStatus.BAD_REQUEST.value,
             message="Invalid RegisterOrganizationRequest",
         )
@@ -85,10 +85,7 @@ async def register_organization(
 
     except PrismDBException as e:
         logger.error("register_request={}, error={}", register_request, e)
-        raise PrismAPIException(
-            code=e.code.value,
-            message=e.message,
-        )
+        raise
 
     return RegisterOrganizationResponse(status=HTTPStatus.OK.value)
 
@@ -107,7 +104,7 @@ async def remove_organization(
     remove_request: RemoveOrganizationRequest,
 ):
     if not remove_request.organization_id or not remove_request.organization_admin_id:
-        raise PrismAPIException(
+        raise PrismException(
             code=HTTPStatus.BAD_REQUEST.value,
             message="Invalid RemoveOrganizationRequest",
         )
@@ -144,11 +141,11 @@ async def remove_organization(
         logger.error("remove_request={}, error={}", remove_request, e)
 
         if isinstance(e, PrismDBException):
-            raise PrismAPIException(code=e.code.value, message=e.message)
+            raise
 
-        raise PrismAPIException(
-            code=HTTPStatus.INTERNAL_SERVER_ERROR.value,
-            message="Internal server error",
+        raise PrismException(
+            code=HTTPStatus.SERVICE_UNAVAILABLE.value,
+            message="Service unavailable",
         )
 
     logger.info("remove_request={}, response={}", remove_request, response)
@@ -170,7 +167,7 @@ async def get_organization(
     org_id: str,
 ):
     if not org_id:
-        raise PrismAPIException(
+        raise PrismException(
             code=HTTPStatus.BAD_REQUEST.value,
             message="Invalid organization ID",
         )
@@ -183,7 +180,7 @@ async def get_organization(
         organization = dynamodb_service.get_organization(org_id)
     except PrismDBException as e:
         logger.error("org_id={}, error={}", org_id, e)
-        raise PrismAPIException(code=e.code.value, message=e.message)
+        raise
 
     return GetOrganizationResponse(
         status=HTTPStatus.OK.value,
@@ -212,7 +209,7 @@ async def update_organization(org_id: str, update_request: UpdateOrganizationReq
             org_id,
             update_request,
         )
-        raise PrismAPIException(
+        raise PrismException(
             code=HTTPStatus.BAD_REQUEST.value,
             message="Invalid organization update request",
         )
@@ -229,10 +226,7 @@ async def update_organization(org_id: str, update_request: UpdateOrganizationReq
         logger.error(
             "org_id={}, update_request={}, error={}", org_id, update_request, e
         )
-        raise PrismAPIException(
-            code=e.code.value,
-            message=e.message,
-        )
+        raise
 
     return UpdateOrganizationResponse(status=HTTPStatus.OK.value)
 
@@ -255,7 +249,7 @@ async def invite_user_to_organization(
         or not invite_request.organization_name
         or not invite_request.organization_user_email
     ):
-        raise PrismAPIException(
+        raise PrismException(
             code=HTTPStatus.BAD_REQUEST.value,
             message="Invalid organization invite request",
         )
@@ -285,7 +279,7 @@ async def invite_user_to_organization(
         logger.error(
             "org_id={}, invite_request={}, error={}", org_id, invite_request, e
         )
-        raise PrismAPIException(code=e.code.value, message=e.message)
+        raise
 
     return InviteUserOrganizationResponse(status=HTTPStatus.OK.value)
 
@@ -309,7 +303,7 @@ async def cancel_pending_user_invite(
         or not cancel_request.organization_name
         or not cancel_request.organization_user_id
     ):
-        raise PrismAPIException(
+        raise PrismException(
             code=HTTPStatus.BAD_REQUEST.value,
             message="Invalid user invite cancel request",
         )
@@ -334,6 +328,6 @@ async def cancel_pending_user_invite(
         logger.error(
             "org_id={}, cancel_request={}, error={}", org_id, cancel_request, e
         )
-        raise PrismAPIException(code=e.code.value, message=e.message)
+        raise
 
     return CancelInviteUserOrganizationResponse(status=HTTPStatus.OK.value)
