@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
     response_model=IntegrationResponse,
     responses={
         200: {"model": IntegrationResponse, "description": "OK"},
-        400: {"model": ErrorDTO, "description": "Error: Bad request"},
+        400: {"model": ErrorDTO, "message": "Error: Bad request"},
     },
 )
 async def integration(
@@ -49,7 +49,7 @@ async def integration(
         or not integration_request.email_address
     ):
         return ErrorDTO(
-            code=HTTPStatus.BAD_REQUEST.value, description="Invalid IntegrationRequest"
+            code=HTTPStatus.BAD_REQUEST.value, message="Invalid IntegrationRequest"
         )
 
     logger.info(integration_request)
@@ -73,7 +73,7 @@ async def integration(
             integration_request,
             e,
         )
-        return ErrorDTO(code=e.code.value, description=e.message)
+        return ErrorDTO(code=e.code.value, message=e.message)
 
     # Initiate background task that processes the files to create docstore and index
     background_tasks.add_task(
@@ -90,7 +90,7 @@ async def integration(
     response_model=IntegrationDetailResponse,
     responses={
         200: {"model": IntegrationDetailResponse, "description": "OK"},
-        400: {"model": ErrorDTO, "description": "Error: Bad request"},
+        400: {"model": ErrorDTO, "message": "Error: Bad request"},
     },
 )
 async def get_integration_detail(
@@ -98,7 +98,7 @@ async def get_integration_detail(
 ):
     if not org_id:
         return ErrorDTO(
-            code=HTTPStatus.BAD_REQUEST.value, description="Invalid organization id"
+            code=HTTPStatus.BAD_REQUEST.value, message="Invalid organization id"
         )
 
     logger.info("org_id=%s", org_id)
@@ -116,7 +116,7 @@ async def get_integration_detail(
         )
     except PrismDBException as e:
         logger.error("org_id=%s, error=%s", org_id, e)
-        return ErrorDTO(code=e.code.value, description=e.message)
+        return ErrorDTO(code=e.code.value, message=e.message)
 
 
 @router.delete(
@@ -126,7 +126,7 @@ async def get_integration_detail(
     response_model=IntegrationRemoveResponse,
     responses={
         200: {"model": IntegrationRemoveResponse, "description": "OK"},
-        400: {"model": ErrorDTO, "description": "Error: Bad request"},
+        400: {"model": ErrorDTO, "message": "Error: Bad request"},
     },
 )
 async def remove_integration_detail(
@@ -136,7 +136,7 @@ async def remove_integration_detail(
     if not org_id or not integration_account_token:
         return ErrorDTO(
             code=HTTPStatus.BAD_REQUEST.value,
-            description="Invalid organization id or account token",
+            message="Invalid organization id or account token",
         )
 
     logger.info(
@@ -172,7 +172,7 @@ async def remove_integration_detail(
             integration_account_token,
             e,
         )
-        return ErrorDTO(code=e.code.value, description=e.message)
+        return ErrorDTO(code=e.code.value, message=e.message)
 
     return IntegrationRemoveResponse(status=HTTPStatus.OK.value)
 
@@ -184,14 +184,14 @@ async def remove_integration_detail(
     response_model=GenerateLinkTokenResponse,
     responses={
         200: {"model": GenerateLinkTokenResponse, "description": "OK"},
-        400: {"model": ErrorDTO, "description": "Error: Bad request"},
+        400: {"model": ErrorDTO, "message": "Error: Bad request"},
     },
 )
 async def generate_link_token(org_id: str):
     if not org_id:
         return ErrorDTO(
             code=HTTPStatus.BAD_REQUEST.value,
-            description="Invalid GenerateLinkTokenRequest",
+            message="Invalid GenerateLinkTokenRequest",
         )
 
     logger.info("org_id=%s", org_id)

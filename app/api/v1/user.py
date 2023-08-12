@@ -41,7 +41,7 @@ logger = logging.getLogger(__name__)
     response_model=RegisterUserResponse,
     responses={
         200: {"model": RegisterUserResponse, "description": "OK"},
-        400: {"model": ErrorDTO, "description": "Error: Bad request"},
+        400: {"model": ErrorDTO, "message": "Error: Bad request"},
     },
 )
 async def register_user(
@@ -54,7 +54,7 @@ async def register_user(
     ):
         return ErrorDTO(
             code=HTTPStatus.BAD_REQUEST.value,
-            description="Invalid RegisterUserRequest",
+            message="Invalid RegisterUserRequest",
         )
 
     logger.info("register_request=%s", register_request)
@@ -102,7 +102,7 @@ async def register_user(
     if type(remove_request) is not CancelInviteUserOrganizationResponse:
         return ErrorDTO(
             code=HTTPStatus.BAD_REQUEST.value,
-            description="Failed to remove user id from whitelist after registration",
+            message="Failed to remove user id from whitelist after registration",
         )
 
     return RegisterUserResponse(status=HTTPStatus.OK.value)
@@ -115,14 +115,14 @@ async def register_user(
     response_model=GetUserResponse,
     responses={
         200: {"model": GetUserResponse, "description": "OK"},
-        400: {"model": ErrorDTO, "description": "Error: Bad request"},
+        400: {"model": ErrorDTO, "message": "Error: Bad request"},
     },
 )
 async def get_user(id: str):
     if not id:
         return ErrorDTO(
             code=HTTPStatus.BAD_REQUEST.value,
-            description="User id is required",
+            message="User id is required",
         )
 
     logger.info("id=%s", id)
@@ -145,14 +145,14 @@ async def get_user(id: str):
     response_model=DeleteUserResponse,
     responses={
         200: {"model": DeleteUserResponse, "description": "OK"},
-        400: {"model": ErrorDTO, "description": "Error: Bad request"},
+        400: {"model": ErrorDTO, "message": "Error: Bad request"},
     },
 )
 async def delete_user(id: str, org_admin_id: str = Header()):
     if not id:
         return ErrorDTO(
             code=HTTPStatus.BAD_REQUEST.value,
-            description="User id is required",
+            message="User id is required",
         )
 
     logger.info("id=%s", id)
@@ -177,14 +177,14 @@ async def delete_user(id: str, org_admin_id: str = Header()):
     response_model=GetInvitationResponse,
     responses={
         200: {"model": GetInvitationResponse, "description": "OK"},
-        400: {"model": ErrorDTO, "description": "Error: Bad request"},
+        400: {"model": ErrorDTO, "message": "Error: Bad request"},
     },
 )
 async def get_invitation_data(id: str):
     if not id:
         return ErrorDTO(
             code=HTTPStatus.BAD_REQUEST.value,
-            description="User id is required",
+            message="User id is required",
         )
 
     logger.info("id=%s", id)

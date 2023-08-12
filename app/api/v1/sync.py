@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
     response_model=SyncOrganizationDataResponse,
     responses={
         200: {"model": SyncOrganizationDataResponse, "description": "OK"},
-        400: {"model": ErrorDTO, "description": "Error: Bad request"},
+        400: {"model": ErrorDTO, "message": "Error: Bad request"},
     },
 )
 async def sync_organization_data(
@@ -40,7 +40,7 @@ async def sync_organization_data(
     if not sync_request.account_token or not sync_request.files:
         return ErrorDTO(
             code=HTTPStatus.BAD_REQUEST.value,
-            description="Invalid SyncOrganizationDataRequest",
+            message="Invalid SyncOrganizationDataRequest",
         )
 
     logger.info("sync_request=%s, org_id=%s", sync_request, org_id)
@@ -92,7 +92,7 @@ async def sync_organization_data(
         logger.error("sync_request=%s, error=%s", sync_request, e)
         return ErrorDTO(
             code=e.code.value,
-            description=e.message,
+            message=e.message,
         )
 
     return SyncOrganizationDataResponse(status=HTTPStatus.OK.value)

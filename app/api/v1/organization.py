@@ -46,7 +46,7 @@ logger = logging.getLogger(__name__)
     response_model=RegisterOrganizationResponse,
     responses={
         200: {"model": RegisterOrganizationResponse, "description": "OK"},
-        400: {"model": ErrorDTO, "description": "Error: Bad request"},
+        400: {"model": ErrorDTO, "message": "Error: Bad request"},
     },
 )
 async def register_organization(
@@ -59,7 +59,7 @@ async def register_organization(
     ):
         return ErrorDTO(
             code=HTTPStatus.BAD_REQUEST.value,
-            description="Invalid RegisterOrganizationRequest",
+            message="Invalid RegisterOrganizationRequest",
         )
 
     org_id = str(uuid.uuid4())
@@ -87,7 +87,7 @@ async def register_organization(
         logger.error("register_request=%s, error=%s", register_request, e)
         return ErrorDTO(
             code=e.code.value,
-            description=e.message,
+            message=e.message,
         )
 
     return RegisterOrganizationResponse(status=HTTPStatus.OK.value)
@@ -100,7 +100,7 @@ async def register_organization(
     response_model=RemoveOrganizationResponse,
     responses={
         200: {"model": RemoveOrganizationResponse, "description": "OK"},
-        400: {"model": ErrorDTO, "description": "Error: Bad request"},
+        400: {"model": ErrorDTO, "message": "Error: Bad request"},
     },
 )
 async def remove_organization(
@@ -109,7 +109,7 @@ async def remove_organization(
     if not remove_request.organization_id or not remove_request.organization_admin_id:
         return ErrorDTO(
             code=HTTPStatus.BAD_REQUEST.value,
-            description="Invalid RemoveOrganizationRequest",
+            message="Invalid RemoveOrganizationRequest",
         )
 
     logger.info("remove_request=%s", remove_request)
@@ -148,7 +148,7 @@ async def remove_organization(
 
         return ErrorDTO(
             code=HTTPStatus.INTERNAL_SERVER_ERROR.value,
-            description="Internal server error",
+            message="Internal server error",
         )
 
     logger.info("remove_request=%s, response=%s", remove_request, response)
@@ -163,7 +163,7 @@ async def remove_organization(
     response_model=GetOrganizationResponse,
     responses={
         200: {"model": GetOrganizationResponse, "description": "OK"},
-        400: {"model": ErrorDTO, "description": "Error: Bad request"},
+        400: {"model": ErrorDTO, "message": "Error: Bad request"},
     },
 )
 async def get_organization(
@@ -172,7 +172,7 @@ async def get_organization(
     if not org_id:
         return ErrorDTO(
             code=HTTPStatus.BAD_REQUEST.value,
-            description="Invalid organization ID",
+            message="Invalid organization ID",
         )
 
     logger.info("org_id=%s", org_id)
@@ -183,7 +183,7 @@ async def get_organization(
         organization = dynamodb_service.get_organization(org_id)
     except PrismDBException as e:
         logger.error("org_id=%s, error=%s", org_id, e)
-        return ErrorDTO(code=e.code.value, description=e.message)
+        return ErrorDTO(code=e.code.value, message=e.message)
 
     return GetOrganizationResponse(
         status=HTTPStatus.OK.value,
@@ -198,7 +198,7 @@ async def get_organization(
     response_model=UpdateOrganizationResponse,
     responses={
         200: {"model": UpdateOrganizationResponse, "description": "OK"},
-        400: {"model": ErrorDTO, "description": "Error: Bad request"},
+        400: {"model": ErrorDTO, "message": "Error: Bad request"},
     },
 )
 async def update_organization(org_id: str, update_request: UpdateOrganizationRequest):
@@ -214,7 +214,7 @@ async def update_organization(org_id: str, update_request: UpdateOrganizationReq
         )
         return ErrorDTO(
             code=HTTPStatus.BAD_REQUEST.value,
-            description="Invalid organization update request",
+            message="Invalid organization update request",
         )
 
     logger.info("org_id=%s, update_request=%s", org_id, update_request)
@@ -231,7 +231,7 @@ async def update_organization(org_id: str, update_request: UpdateOrganizationReq
         )
         return ErrorDTO(
             code=e.code.value,
-            description=e.message,
+            message=e.message,
         )
 
     return UpdateOrganizationResponse(status=HTTPStatus.OK.value)
@@ -244,7 +244,7 @@ async def update_organization(org_id: str, update_request: UpdateOrganizationReq
     response_model=InviteUserOrganizationResponse,
     responses={
         200: {"model": InviteUserOrganizationResponse, "description": "OK"},
-        400: {"model": ErrorDTO, "description": "Error: Bad request"},
+        400: {"model": ErrorDTO, "message": "Error: Bad request"},
     },
 )
 async def invite_user_to_organization(
@@ -257,7 +257,7 @@ async def invite_user_to_organization(
     ):
         return ErrorDTO(
             code=HTTPStatus.BAD_REQUEST.value,
-            description="Invalid organization invite request",
+            message="Invalid organization invite request",
         )
 
     logger.info("org_id=%s, invite_request=%s", org_id, invite_request)
@@ -297,7 +297,7 @@ async def invite_user_to_organization(
     response_model=CancelInviteUserOrganizationResponse,
     responses={
         200: {"model": CancelInviteUserOrganizationResponse, "description": "OK"},
-        400: {"model": ErrorDTO, "description": "Error: Bad request"},
+        400: {"model": ErrorDTO, "message": "Error: Bad request"},
     },
 )
 async def cancel_pending_user_invite(
@@ -311,7 +311,7 @@ async def cancel_pending_user_invite(
     ):
         return ErrorDTO(
             code=HTTPStatus.BAD_REQUEST.value,
-            description="Invalid user invite cancel request",
+            message="Invalid user invite cancel request",
         )
 
     logger.info("org_id=%s, cancel_request=%s", org_id, cancel_request)
