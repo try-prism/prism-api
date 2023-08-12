@@ -2,7 +2,7 @@ import logging
 import uuid
 from http import HTTPStatus
 
-from exceptions import PrismDBException, PrismException
+from exceptions import PrismAPIException, PrismDBException, PrismException
 from fastapi import APIRouter
 from models.RequestModels import (
     CancelInviteUserOrganizationRequest,
@@ -46,7 +46,7 @@ logger = logging.getLogger(__name__)
     response_model=RegisterOrganizationResponse,
     responses={
         200: {"model": RegisterOrganizationResponse, "description": "OK"},
-        400: {"model": ErrorDTO, "description": "Error: Bad request"},
+        400: {"model": ErrorDTO, "message": "Error: Bad request"},
     },
 )
 async def register_organization(
@@ -57,9 +57,9 @@ async def register_organization(
         or not register_request.organization_email
         or not register_request.organization_admin_id
     ):
-        return ErrorDTO(
+        raise PrismAPIException(
             code=HTTPStatus.BAD_REQUEST.value,
-            description="Invalid RegisterOrganizationRequest",
+            message="Invalid RegisterOrganizationRequest",
         )
 
     org_id = str(uuid.uuid4())
@@ -74,11 +74,20 @@ async def register_organization(
             org_email=register_request.organization_email,
             org_admin_id=register_request.organization_admin_id,
         )
+
+        await invite_user_to_organization(
+            org_id=org_id,
+            invite_request=InviteUserOrganizationRequest(
+                organization_name=register_request.organization_name,
+                organization_user_email=register_request.organization_email,
+            ),
+        )
+
     except PrismDBException as e:
         logger.error("register_request=%s, error=%s", register_request, e)
-        return ErrorDTO(
-            code=e.code,
-            description=e.message,
+        raise PrismAPIException(
+            code=e.code.value,
+            message=e.message,
         )
 
     return RegisterOrganizationResponse(status=HTTPStatus.OK.value)
@@ -91,16 +100,16 @@ async def register_organization(
     response_model=RemoveOrganizationResponse,
     responses={
         200: {"model": RemoveOrganizationResponse, "description": "OK"},
-        400: {"model": ErrorDTO, "description": "Error: Bad request"},
+        400: {"model": ErrorDTO, "message": "Error: Bad request"},
     },
 )
 async def remove_organization(
     remove_request: RemoveOrganizationRequest,
 ):
     if not remove_request.organization_id or not remove_request.organization_admin_id:
-        return ErrorDTO(
+        raise PrismAPIException(
             code=HTTPStatus.BAD_REQUEST.value,
-            description="Invalid RemoveOrganizationRequest",
+            message="Invalid RemoveOrganizationRequest",
         )
 
     logger.info("remove_request=%s", remove_request)
@@ -135,11 +144,11 @@ async def remove_organization(
         logger.error("remove_request=%s, error=%s", remove_request, e)
 
         if isinstance(e, PrismDBException):
-            return ErrorDTO(code=e.code, message=e.message)
+            raise PrismAPIException(code=e.code.value, message=e.message)
 
-        return ErrorDTO(
+        raise PrismAPIException(
             code=HTTPStatus.INTERNAL_SERVER_ERROR.value,
-            description="Internal server error",
+            message="Internal server error",
         )
 
     logger.info("remove_request=%s, response=%s", remove_request, response)
@@ -154,16 +163,16 @@ async def remove_organization(
     response_model=GetOrganizationResponse,
     responses={
         200: {"model": GetOrganizationResponse, "description": "OK"},
-        400: {"model": ErrorDTO, "description": "Error: Bad request"},
+        400: {"model": ErrorDTO, "message": "Error: Bad request"},
     },
 )
 async def get_organization(
     org_id: str,
 ):
     if not org_id:
-        return ErrorDTO(
+        raise PrismAPIException(
             code=HTTPStatus.BAD_REQUEST.value,
-            description="Invalid organization ID",
+            message="Invalid organization ID",
         )
 
     logger.info("org_id=%s", org_id)
@@ -174,7 +183,7 @@ async def get_organization(
         organization = dynamodb_service.get_organization(org_id)
     except PrismDBException as e:
         logger.error("org_id=%s, error=%s", org_id, e)
-        return ErrorDTO(code=e.code, description=e.message)
+        raise PrismAPIException(code=e.code.value, message=e.message)
 
     return GetOrganizationResponse(
         status=HTTPStatus.OK.value,
@@ -189,7 +198,7 @@ async def get_organization(
     response_model=UpdateOrganizationResponse,
     responses={
         200: {"model": UpdateOrganizationResponse, "description": "OK"},
-        400: {"model": ErrorDTO, "description": "Error: Bad request"},
+        400: {"model": ErrorDTO, "message": "Error: Bad request"},
     },
 )
 async def update_organization(org_id: str, update_request: UpdateOrganizationRequest):
@@ -203,9 +212,9 @@ async def update_organization(org_id: str, update_request: UpdateOrganizationReq
             org_id,
             update_request,
         )
-        return ErrorDTO(
+        raise PrismAPIException(
             code=HTTPStatus.BAD_REQUEST.value,
-            description="Invalid organization update request",
+            message="Invalid organization update request",
         )
 
     logger.info("org_id=%s, update_request=%s", org_id, update_request)
@@ -220,9 +229,9 @@ async def update_organization(org_id: str, update_request: UpdateOrganizationReq
         logger.error(
             "org_id=%s, update_request=%s, error=%s", org_id, update_request, e
         )
-        return ErrorDTO(
-            code=e.code,
-            description=e.message,
+        raise PrismAPIException(
+            code=e.code.value,
+            message=e.message,
         )
 
     return UpdateOrganizationResponse(status=HTTPStatus.OK.value)
@@ -235,7 +244,7 @@ async def update_organization(org_id: str, update_request: UpdateOrganizationReq
     response_model=InviteUserOrganizationResponse,
     responses={
         200: {"model": InviteUserOrganizationResponse, "description": "OK"},
-        400: {"model": ErrorDTO, "description": "Error: Bad request"},
+        400: {"model": ErrorDTO, "message": "Error: Bad request"},
     },
 )
 async def invite_user_to_organization(
@@ -246,9 +255,9 @@ async def invite_user_to_organization(
         or not invite_request.organization_name
         or not invite_request.organization_user_email
     ):
-        return ErrorDTO(
+        raise PrismAPIException(
             code=HTTPStatus.BAD_REQUEST.value,
-            description="Invalid organization invite request",
+            message="Invalid organization invite request",
         )
 
     logger.info("org_id=%s, invite_request=%s", org_id, invite_request)
@@ -276,7 +285,7 @@ async def invite_user_to_organization(
         logger.error(
             "org_id=%s, invite_request=%s, error=%s", org_id, invite_request, e
         )
-        return ErrorDTO(code=e.code, message=e.message)
+        raise PrismAPIException(code=e.code.value, message=e.message)
 
     return InviteUserOrganizationResponse(status=HTTPStatus.OK.value)
 
@@ -288,7 +297,7 @@ async def invite_user_to_organization(
     response_model=CancelInviteUserOrganizationResponse,
     responses={
         200: {"model": CancelInviteUserOrganizationResponse, "description": "OK"},
-        400: {"model": ErrorDTO, "description": "Error: Bad request"},
+        400: {"model": ErrorDTO, "message": "Error: Bad request"},
     },
 )
 async def cancel_pending_user_invite(
@@ -300,9 +309,9 @@ async def cancel_pending_user_invite(
         or not cancel_request.organization_name
         or not cancel_request.organization_user_id
     ):
-        return ErrorDTO(
+        raise PrismAPIException(
             code=HTTPStatus.BAD_REQUEST.value,
-            description="Invalid user invite cancel request",
+            message="Invalid user invite cancel request",
         )
 
     logger.info("org_id=%s, cancel_request=%s", org_id, cancel_request)
@@ -325,6 +334,6 @@ async def cancel_pending_user_invite(
         logger.error(
             "org_id=%s, cancel_request=%s, error=%s", org_id, cancel_request, e
         )
-        return ErrorDTO(code=e.code, message=e.message)
+        raise PrismAPIException(code=e.code.value, message=e.message)
 
     return CancelInviteUserOrganizationResponse(status=HTTPStatus.OK.value)

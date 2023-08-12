@@ -7,7 +7,7 @@ from .WhitelistModel import WhitelistModel
 
 class ErrorDTO(BaseModel):
     code: int
-    description: str
+    message: str
 
 
 class GenerateLinkTokenResponse(BaseModel):

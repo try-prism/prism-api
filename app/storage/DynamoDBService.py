@@ -91,33 +91,6 @@ class DynamoDBService:
 
         return response
 
-    def update_item(
-        self, table_name: str, key: dict, field_name: str, field_value: dict
-    ) -> None:
-        try:
-            self.client.update_item(
-                TableName=table_name,
-                Key=key,
-                UpdateExpression=f"SET {field_name} = :v, updated_at = :ua",
-                ExpressionAttributeValues={
-                    ":v": field_value,
-                    ":ua": {"S": str(time.time())},
-                },
-            )
-        except ClientError as e:
-            logger.error(
-                "table_name=%s, key=%s, field_name=%s, field_value=%s, error=%s",
-                table_name,
-                key,
-                field_name,
-                field_value,
-                str(e),
-            )
-            raise PrismDBException(
-                code=PrismDBExceptionCode.ITEM_UPDATE_ERROR,
-                message="Could not update item to table",
-            )
-
     def delete_item(self, table_name: str, key: dict) -> dict:
         response = self.client.delete_item(
             TableName=table_name, Key=key, ReturnValues="ALL_OLD"
@@ -195,7 +168,7 @@ class DynamoDBService:
             "name": {"S": org_name},
             "email": {"S": org_email},
             "admin_id": {"S": org_admin_id},
-            "user_list": {"L": [org_admin_id]},
+            "user_list": {"L": [{"S": org_admin_id}]},
             "invited_user_list": {"L": []},
             "link_id_map": {"M": {}},
             "document_list": {"L": []},
@@ -281,12 +254,7 @@ class DynamoDBService:
             invited_user_list.append(org_user_id)
 
         try:
-            self.update_item(
-                table_name=DYNAMODB_ORGANIZATION_TABLE,
-                key=get_organization_key(org_id),
-                field_name="invited_user_list",
-                field_value={"L": invited_user_list},
-            )
+            self.put_item(DYNAMODB_ORGANIZATION_TABLE, serialize(organization.dict()))
         except PrismDBException as e:
             word = "remove" if is_remove else "add"
             e.message = f"Failed to {word} user to the invited user list"
@@ -322,12 +290,7 @@ class DynamoDBService:
         user_list.append(id)
 
         try:
-            self.update_item(
-                table_name=DYNAMODB_ORGANIZATION_TABLE,
-                key=get_organization_key(organization_id),
-                field_name="user_list",
-                field_value={"L": user_list},
-            )
+            self.put_item(DYNAMODB_ORGANIZATION_TABLE, serialize(organization.dict()))
         except PrismDBException as e:
             e.message = "Could not add user to organization"
             raise
@@ -355,12 +318,7 @@ class DynamoDBService:
 
         if user_id in user_list:
             user_list.remove(user_id)
-            self.update_item(
-                table_name=DYNAMODB_ORGANIZATION_TABLE,
-                key=get_organization_key(user.organization_id),
-                field_name="user_list",
-                field_value={"L": user_list},
-            )
+            self.put_item(DYNAMODB_ORGANIZATION_TABLE, serialize(organization.dict()))
         else:
             raise PrismDBException(
                 code=PrismDBExceptionCode.USER_DOES_NOT_EXIST,
@@ -370,63 +328,44 @@ class DynamoDBService:
     def add_integration(self, org_id: str, account_token: str) -> None:
         merge_service = MergeService(account_token=account_token)
 
-        response = self.get_organization(org_id)
-        org_item = to_organization_model(response)
+        organization = self.get_organization(org_id)
 
         timestamp = str(time.time())
-        link_id_map = org_item.link_id_map
+        link_id_map = organization.link_id_map
 
         integration_provider = merge_service.get_integration_provider()
         integration_item = integration_provider.dict()
         integration_item["created"] = timestamp
         integration_item["status"] = IntegrationStatus.SYNCING.value
 
-        link_id_map[account_token] = {"M": serialize(integration_item)}
+        link_id_map[account_token] = integration_item
 
-        self.update_item(
-            DYNAMODB_ORGANIZATION_TABLE,
-            get_organization_key(org_id),
-            field_name="link_id_map",
-            field_value={"M": link_id_map},
-        )
+        self.put_item(DYNAMODB_ORGANIZATION_TABLE, serialize(organization.dict()))
 
     def remove_integration(self, org_id: str, account_token: str) -> None:
-        response = self.get_organization(org_id)
-        org_item = to_organization_model(response)
+        organization = self.get_organization(org_id)
 
-        link_id_map = org_item.link_id_map
+        link_id_map = organization.link_id_map
         del link_id_map[account_token]
 
-        self.update_item(
-            DYNAMODB_ORGANIZATION_TABLE,
-            get_organization_key(org_id),
-            field_name="link_id_map",
-            field_value={"M": link_id_map},
-        )
+        self.put_item(DYNAMODB_ORGANIZATION_TABLE, serialize(organization.dict()))
 
     def modify_integration_status(
         self, org_id: str, account_token: str, status: IntegrationStatus
     ) -> None:
-        response = self.get_organization(org_id)
-        org_item = to_organization_model(response)
+        organization = self.get_organization(org_id)
 
-        link_id_map = org_item.link_id_map
-        link_id_map[account_token]["M"]["status"]["S"] = status.value
+        link_id_map = organization.link_id_map
+        link_id_map[account_token]["status"] = status.value
 
-        self.update_item(
-            DYNAMODB_ORGANIZATION_TABLE,
-            get_organization_key(org_id),
-            field_name="link_id_map",
-            field_value={"M": link_id_map},
-        )
+        self.put_item(DYNAMODB_ORGANIZATION_TABLE, serialize(organization.dict()))
 
     def modify_organization_files(
         self, org_id: str, file_ids: list[str], is_remove: bool
     ) -> None:
-        response = self.get_organization(org_id)
-        org_item = to_organization_model(response)
+        organization = self.get_organization(org_id)
 
-        document_list = org_item.document_list
+        document_list = organization.document_list
         temp_file_set = set(document_list)
 
         if is_remove:
@@ -434,12 +373,9 @@ class DynamoDBService:
         else:
             temp_file_set.update(file_ids)
 
-        self.update_item(
-            DYNAMODB_ORGANIZATION_TABLE,
-            get_organization_key(org_id),
-            field_name="document_list",
-            field_value={"L": list(temp_file_set)},
-        )
+        organization.document_list = list(temp_file_set)
+
+        self.put_item(DYNAMODB_ORGANIZATION_TABLE, serialize(organization.dict()))
 
     def modify_file_in_batch(
         self,
@@ -532,9 +468,6 @@ class DynamoDBService:
                 message="You don't have permission to edit this organization",
             )
 
-        self.update_item(
-            DYNAMODB_ORGANIZATION_TABLE,
-            get_organization_key(org_id),
-            field_name="admin_id",
-            field_value={"S": new_admin_id},
-        )
+        organization.admin_id = new_admin_id
+
+        self.put_item(DYNAMODB_ORGANIZATION_TABLE, serialize(organization.dict()))
