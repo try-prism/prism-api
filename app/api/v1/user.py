@@ -3,7 +3,6 @@ from http import HTTPStatus
 
 from exceptions import PrismDBException, PrismException
 from fastapi import APIRouter, Header
-from models import to_whitelist_model
 from models.RequestModels import (
     CancelInviteUserOrganizationRequest,
     RegisterUserRequest,
@@ -64,26 +63,25 @@ async def register_user(
     cognito_service = CognitoService()
 
     try:
-        whitelist_response = dynamodb_service.get_whitelist_user_data(
+        whitelist_user = dynamodb_service.get_whitelist_user_data(
             user_id=register_request.id
         )
-        whitelist_item = to_whitelist_model(whitelist_response)
         logger.info(
-            "register_request=%s, whitelist_item=%s", register_request, whitelist_item
+            "register_request=%s, whitelist_user=%s", register_request, whitelist_user
         )
         # Add user to the cognito user pool
         cognito_service.create_user(
             user_id=register_request.email,
             user_email=register_request.email,
             user_name=register_request.name,
-            organization_id=whitelist_item.org_id,
+            organization_id=whitelist_user.org_id,
         )
         # Add user to user table
         dynamodb_service.register_user(
             id=register_request.email,
             email=register_request.email,
             name=register_request.name,
-            organization_id=whitelist_item.org_id,
+            organization_id=whitelist_user.org_id,
         )
     except PrismException as e:
         logger.error(
@@ -94,10 +92,10 @@ async def register_user(
         return ErrorDTO(code=e.code.value, message=e.message)
 
     remove_request = await cancel_pending_user_invite(
-        org_id=whitelist_item.org_id,
+        org_id=whitelist_user.org_id,
         cancel_request=CancelInviteUserOrganizationRequest(
-            organization_name=whitelist_item.org_name,
-            organization_user_id=whitelist_item.id,
+            organization_name=whitelist_user.org_name,
+            organization_user_id=whitelist_user.id,
         ),
     )
 
@@ -199,7 +197,7 @@ async def get_invitation_data(id: str):
         logger.error("id=%s, error=%s", id, e)
         return ErrorDTO(code=e.code.value, message=e.message)
 
-    logger.info("id=%s, whitelist_item=%s", id, whitelist_user)
+    logger.info("id=%s, whitelist_user=%s", id, whitelist_user)
 
     return GetInvitationResponse(
         status=HTTPStatus.OK.value, whitelist_user=whitelist_user

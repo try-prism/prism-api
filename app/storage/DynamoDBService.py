@@ -253,10 +253,8 @@ class DynamoDBService:
 
             invited_user_list.append(org_user_id)
 
-        updated_item = serialize(organization.dict())
-
         try:
-            self.put_item(DYNAMODB_ORGANIZATION_TABLE, updated_item)
+            self.put_item(DYNAMODB_ORGANIZATION_TABLE, serialize(organization.dict()))
         except PrismDBException as e:
             word = "remove" if is_remove else "add"
             e.message = f"Failed to {word} user to the invited user list"
@@ -291,10 +289,8 @@ class DynamoDBService:
         user_list = organization.user_list
         user_list.append(id)
 
-        updated_item = serialize(organization.dict())
-
         try:
-            self.put_item(DYNAMODB_ORGANIZATION_TABLE, updated_item)
+            self.put_item(DYNAMODB_ORGANIZATION_TABLE, serialize(organization.dict()))
         except PrismDBException as e:
             e.message = "Could not add user to organization"
             raise
@@ -322,8 +318,7 @@ class DynamoDBService:
 
         if user_id in user_list:
             user_list.remove(user_id)
-            updated_item = serialize(organization.dict())
-            self.put_item(DYNAMODB_ORGANIZATION_TABLE, updated_item)
+            self.put_item(DYNAMODB_ORGANIZATION_TABLE, serialize(organization.dict()))
         else:
             raise PrismDBException(
                 code=PrismDBExceptionCode.USER_DOES_NOT_EXIST,
@@ -363,9 +358,7 @@ class DynamoDBService:
         link_id_map = organization.link_id_map
         link_id_map[account_token]["status"] = status.value
 
-        updated_item = serialize(organization.dict())
-
-        self.put_item(DYNAMODB_ORGANIZATION_TABLE, updated_item)
+        self.put_item(DYNAMODB_ORGANIZATION_TABLE, serialize(organization.dict()))
 
     def modify_organization_files(
         self, org_id: str, file_ids: list[str], is_remove: bool
