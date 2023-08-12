@@ -1,7 +1,7 @@
 import logging
 from http import HTTPStatus
 
-from exceptions import PrismDBException, PrismException
+from exceptions import PrismAPIException, PrismDBException, PrismException
 from fastapi import APIRouter, Header
 from models.RequestModels import (
     CancelInviteUserOrganizationRequest,
@@ -52,7 +52,7 @@ async def register_user(
         or not register_request.email
         or not register_request.name
     ):
-        return ErrorDTO(
+        raise PrismAPIException(
             code=HTTPStatus.BAD_REQUEST.value,
             message="Invalid RegisterUserRequest",
         )
@@ -89,7 +89,7 @@ async def register_user(
             register_request,
             e,
         )
-        return ErrorDTO(code=e.code.value, message=e.message)
+        raise PrismAPIException(code=e.code.value, message=e.message)
 
     remove_request = await cancel_pending_user_invite(
         org_id=whitelist_user.org_id,
@@ -100,7 +100,7 @@ async def register_user(
     )
 
     if type(remove_request) is not CancelInviteUserOrganizationResponse:
-        return ErrorDTO(
+        raise PrismAPIException(
             code=HTTPStatus.BAD_REQUEST.value,
             message="Failed to remove user id from whitelist after registration",
         )
@@ -120,7 +120,7 @@ async def register_user(
 )
 async def get_user(id: str):
     if not id:
-        return ErrorDTO(
+        raise PrismAPIException(
             code=HTTPStatus.BAD_REQUEST.value,
             message="User id is required",
         )
@@ -133,7 +133,7 @@ async def get_user(id: str):
         user = dynamodb_service.get_user(user_id=id)
     except PrismDBException as e:
         logger.error("id=%s, error=%s", id, e)
-        return ErrorDTO(code=e.code.value, message=e.message)
+        raise PrismAPIException(code=e.code.value, message=e.message)
 
     return GetUserResponse(status=HTTPStatus.OK.value, user=user)
 
@@ -150,7 +150,7 @@ async def get_user(id: str):
 )
 async def delete_user(id: str, org_admin_id: str = Header()):
     if not id:
-        return ErrorDTO(
+        raise PrismAPIException(
             code=HTTPStatus.BAD_REQUEST.value,
             message="User id is required",
         )
@@ -165,7 +165,7 @@ async def delete_user(id: str, org_admin_id: str = Header()):
         dynamodb_service.remove_user(user_id=id, org_admin_id=org_admin_id)
     except PrismException as e:
         logger.error("id=%s, org_admin_id=%s, error=%s", id, org_admin_id, e)
-        return ErrorDTO(code=e.code.value, message=e.message)
+        raise PrismAPIException(code=e.code.value, message=e.message)
 
     return DeleteUserResponse(status=HTTPStatus.OK.value)
 
@@ -182,7 +182,7 @@ async def delete_user(id: str, org_admin_id: str = Header()):
 )
 async def get_invitation_data(id: str):
     if not id:
-        return ErrorDTO(
+        raise PrismAPIException(
             code=HTTPStatus.BAD_REQUEST.value,
             message="User id is required",
         )
@@ -195,7 +195,7 @@ async def get_invitation_data(id: str):
         whitelist_user = dynamodb_service.get_whitelist_user_data(user_id=id)
     except PrismDBException as e:
         logger.error("id=%s, error=%s", id, e)
-        return ErrorDTO(code=e.code.value, message=e.message)
+        raise PrismAPIException(code=e.code.value, message=e.message)
 
     logger.info("id=%s, whitelist_user=%s", id, whitelist_user)
 

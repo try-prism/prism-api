@@ -1,7 +1,12 @@
 import logging
 from http import HTTPStatus
 
-from exceptions import PrismDBException, PrismException, PrismMergeException
+from exceptions import (
+    PrismAPIException,
+    PrismDBException,
+    PrismException,
+    PrismMergeException,
+)
 from fastapi import APIRouter, BackgroundTasks, Header
 from models.RequestModels import IntegrationRequest
 from models.ResponseModels import (
@@ -48,7 +53,7 @@ async def integration(
         or not integration_request.organization_name
         or not integration_request.email_address
     ):
-        return ErrorDTO(
+        raise PrismAPIException(
             code=HTTPStatus.BAD_REQUEST.value, message="Invalid IntegrationRequest"
         )
 
@@ -73,7 +78,7 @@ async def integration(
             integration_request,
             e,
         )
-        return ErrorDTO(code=e.code.value, message=e.message)
+        raise PrismAPIException(code=e.code.value, message=e.message)
 
     # Initiate background task that processes the files to create docstore and index
     background_tasks.add_task(
@@ -97,7 +102,7 @@ async def get_integration_detail(
     org_id: str,
 ):
     if not org_id:
-        return ErrorDTO(
+        raise PrismAPIException(
             code=HTTPStatus.BAD_REQUEST.value, message="Invalid organization id"
         )
 
@@ -116,7 +121,7 @@ async def get_integration_detail(
         )
     except PrismDBException as e:
         logger.error("org_id=%s, error=%s", org_id, e)
-        return ErrorDTO(code=e.code.value, message=e.message)
+        raise PrismAPIException(code=e.code.value, message=e.message)
 
 
 @router.delete(
@@ -134,7 +139,7 @@ async def remove_integration_detail(
     integration_account_token: str = Header(),
 ):
     if not org_id or not integration_account_token:
-        return ErrorDTO(
+        raise PrismAPIException(
             code=HTTPStatus.BAD_REQUEST.value,
             message="Invalid organization id or account token",
         )
@@ -172,7 +177,7 @@ async def remove_integration_detail(
             integration_account_token,
             e,
         )
-        return ErrorDTO(code=e.code.value, message=e.message)
+        raise PrismAPIException(code=e.code.value, message=e.message)
 
     return IntegrationRemoveResponse(status=HTTPStatus.OK.value)
 
@@ -189,7 +194,7 @@ async def remove_integration_detail(
 )
 async def generate_link_token(org_id: str):
     if not org_id:
-        return ErrorDTO(
+        raise PrismAPIException(
             code=HTTPStatus.BAD_REQUEST.value,
             message="Invalid GenerateLinkTokenRequest",
         )
@@ -208,7 +213,7 @@ async def generate_link_token(org_id: str):
         )
     except PrismMergeException as e:
         logger.error("org_id=%s, error=%s", org_id, e)
-        return ErrorDTO(code=e.code.value, message=e.message)
+        raise PrismAPIException(code=e.code.value, message=e.message)
 
     logger.info(
         "org_id=%s, link_token=%s",

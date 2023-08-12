@@ -1,4 +1,5 @@
 import logging
+from http import HTTPStatus
 
 from api.v1 import (
     integration_router,
@@ -7,12 +8,14 @@ from api.v1 import (
     sync_router,
     user_router,
 )
-from fastapi import FastAPI
+from exceptions import PrismAPIException
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
+from fastapi.responses import JSONResponse
 
 log_format = (
-    "%(asctime)s::%(levelname)s::%(name)s "
+    "%(asctime)s::%(levelname)s "
     "[%(filename)s::%(lineno)d::%(funcName)20s()] %(message)s"
 )
 logging.basicConfig(level=logging.INFO, format=log_format)
@@ -26,6 +29,14 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.exception_handler(PrismAPIException)
+async def prism_api_exception_handler(request: Request, e: PrismAPIException):
+    return JSONResponse(
+        status_code=HTTPStatus.BAD_REQUEST.value,
+        content={"code": e.code, "message": e.message},
+    )
 
 
 @app.get("/")
