@@ -1,6 +1,11 @@
 from http import HTTPStatus
 
-from exceptions import PrismDBException, PrismException, PrismMergeException
+from exceptions import (
+    PrismDBException,
+    PrismException,
+    PrismExceptionCode,
+    PrismMergeException,
+)
 from fastapi import APIRouter, BackgroundTasks, Header
 from loguru import logger
 from models.RequestModels import IntegrationRequest
@@ -48,7 +53,7 @@ async def integration(
         or not integration_request.email_address
     ):
         raise PrismException(
-            code=HTTPStatus.BAD_REQUEST.value, message="Invalid IntegrationRequest"
+            code=PrismExceptionCode.BAD_REQUEST, message="Invalid IntegrationRequest"
         )
 
     logger.info(integration_request)
@@ -97,7 +102,7 @@ async def get_integration_detail(
 ):
     if not org_id:
         raise PrismException(
-            code=HTTPStatus.BAD_REQUEST.value, message="Invalid organization id"
+            code=PrismExceptionCode.BAD_REQUEST, message="Invalid organization id"
         )
 
     logger.info("org_id={}", org_id)
@@ -134,7 +139,7 @@ async def remove_integration_detail(
 ):
     if not org_id or not integration_account_token:
         raise PrismException(
-            code=HTTPStatus.BAD_REQUEST.value,
+            code=PrismExceptionCode.BAD_REQUEST,
             message="Invalid organization id or account token",
         )
 
@@ -189,7 +194,7 @@ async def remove_integration_detail(
 async def generate_link_token(org_id: str):
     if not org_id:
         raise PrismException(
-            code=HTTPStatus.BAD_REQUEST.value,
+            code=PrismExceptionCode.BAD_REQUEST,
             message="Invalid GenerateLinkTokenRequest",
         )
 

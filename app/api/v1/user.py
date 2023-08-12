@@ -1,6 +1,6 @@
 from http import HTTPStatus
 
-from exceptions import PrismDBException, PrismException
+from exceptions import PrismDBException, PrismException, PrismExceptionCode
 from fastapi import APIRouter, Header
 from loguru import logger
 from models.RequestModels import (
@@ -53,7 +53,7 @@ async def register_user(
         or not register_request.name
     ):
         raise PrismException(
-            code=HTTPStatus.BAD_REQUEST.value,
+            code=PrismExceptionCode.BAD_REQUEST,
             message="Invalid RegisterUserRequest",
         )
 
@@ -101,7 +101,7 @@ async def register_user(
 
     if type(remove_request) is not CancelInviteUserOrganizationResponse:
         raise PrismException(
-            code=HTTPStatus.BAD_REQUEST.value,
+            code=PrismExceptionCode.BAD_REQUEST,
             message="Failed to remove user id from whitelist after registration",
         )
 
@@ -121,7 +121,7 @@ async def register_user(
 async def get_user(id: str):
     if not id:
         raise PrismException(
-            code=HTTPStatus.BAD_REQUEST.value,
+            code=PrismExceptionCode.BAD_REQUEST,
             message="User id is required",
         )
 
@@ -151,7 +151,7 @@ async def get_user(id: str):
 async def delete_user(id: str, org_admin_id: str = Header()):
     if not id:
         raise PrismException(
-            code=HTTPStatus.BAD_REQUEST.value,
+            code=PrismExceptionCode.BAD_REQUEST,
             message="User id is required",
         )
 
@@ -183,7 +183,7 @@ async def delete_user(id: str, org_admin_id: str = Header()):
 async def get_invitation_data(id: str):
     if not id:
         raise PrismException(
-            code=HTTPStatus.BAD_REQUEST.value,
+            code=PrismExceptionCode.BAD_REQUEST,
             message="User id is required",
         )
 

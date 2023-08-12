@@ -2,7 +2,7 @@ from http import HTTPStatus
 
 from constants import DYNAMODB_FILE_TABLE
 from enums import FileOperation
-from exceptions import PrismException
+from exceptions import PrismException, PrismExceptionCode
 from fastapi import APIRouter
 from loguru import logger
 from merge.resources.filestorage.types import File
@@ -39,7 +39,7 @@ async def sync_organization_data(
 ):
     if not sync_request.account_token or not sync_request.files:
         raise PrismException(
-            code=HTTPStatus.BAD_REQUEST.value,
+            code=PrismExceptionCode.BAD_REQUEST,
             message="Invalid SyncOrganizationDataRequest",
         )
 
