@@ -1,4 +1,3 @@
-import logging
 from collections.abc import Sequence
 
 import tiktoken
@@ -28,9 +27,8 @@ from llama_index.llms import OpenAI
 from llama_index.schema import BaseNode
 from llama_index.vector_stores import MilvusVectorStore
 from llama_index.vector_stores.types import NodeWithEmbedding
+from loguru import logger
 from pymilvus import Collection, MilvusException
-
-logger = logging.getLogger(__name__)
 
 
 class DataIndexingService:
@@ -48,21 +46,21 @@ class DataIndexingService:
         )
 
     def store_vectors(self, nodes: Sequence[BaseNode]) -> None:
-        logger.info("Storing vectors & index. org_id=%s", self.org_id)
+        logger.info("Storing vectors & index. org_id={}", self.org_id)
 
         vector_index = VectorStoreIndex(
             nodes=nodes, storage_context=self.storage_context
         )
 
         logger.info(
-            "Stored index to vector store. org_id=%s, index_id=%s",
+            "Stored index to vector store. org_id={}, index_id={}",
             self.org_id,
             vector_index.index_id,
         )
 
     def add_nodes(self, nodes: list[NodeWithEmbedding]) -> None:
         logger.info(
-            "Adding nodes. org_id=%s, nodes=%s",
+            "Adding nodes. org_id={}, nodes={}",
             self.org_id,
             nodes,
         )
@@ -71,21 +69,21 @@ class DataIndexingService:
             self.storage_context.vector_store.add(nodes)
         except MilvusException as e:
             logger.error(
-                "org_id=%s, nodes=%s, error=%s",
+                "org_id={}, nodes={}, error={}",
                 self.org_id,
                 nodes,
                 e,
             )
 
         logger.info(
-            "Finished adding nodes. org_id=%s, nodes=%s",
+            "Finished adding nodes. org_id={}, nodes={}",
             self.org_id,
             nodes,
         )
 
     def delete_nodes(self, ref_doc_ids: list[str]) -> None:
         logger.info(
-            "Deleting nodes. org_id=%s, ref_doc_ids=%s",
+            "Deleting nodes. org_id={}, ref_doc_ids={}",
             self.org_id,
             ref_doc_ids,
         )
@@ -95,21 +93,21 @@ class DataIndexingService:
                 self.storage_context.vector_store.delete(ref_doc_id=ref_doc_id)
             except MilvusException as e:
                 logger.error(
-                    "org_id=%s, ref_doc_id=%s, error=%s",
+                    "org_id={}, ref_doc_id={}, error={}",
                     self.org_id,
                     ref_doc_id,
                     e,
                 )
 
         logger.info(
-            "Finished deleting nodes. org_id=%s, ref_doc_ids=%s",
+            "Finished deleting nodes. org_id={}, ref_doc_ids={}",
             self.org_id,
             ref_doc_ids,
         )
 
     def drop_collection(self) -> None:
         logger.info(
-            "Dropping collection. org_id=%s",
+            "Dropping collection. org_id={}",
             self.org_id,
         )
 
@@ -118,19 +116,19 @@ class DataIndexingService:
             collection.drop()
         except MilvusException as e:
             logger.error(
-                "org_id=%s, error=%s",
+                "org_id={}, error={}",
                 self.org_id,
                 e,
             )
 
         logger.info(
-            "Finished dropping collection. org_id=%s",
+            "Finished dropping collection. org_id={}",
             self.org_id,
         )
 
     def load_vector_index(self) -> VectorStoreIndex:
         logger.info(
-            "Loading vector index. org_id=%s",
+            "Loading vector index. org_id={}",
             self.org_id,
         )
 

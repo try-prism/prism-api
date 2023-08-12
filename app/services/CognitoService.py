@@ -1,12 +1,10 @@
-import logging
 import secrets
 
 import boto3
 from constants import COGNITO_USER_POOL_ID
 from exceptions import PrismIdentityException, PrismIdentityExceptionCode
+from loguru import logger
 from services import SESService
-
-logger = logging.getLogger(__name__)
 
 
 class CognitoService:
@@ -20,7 +18,7 @@ class CognitoService:
     ) -> None:
         random_password = secrets.token_urlsafe(15)
         logger.info(
-            "user_id=%s, user_email=%s, user_name=%s, organization_id=%s, random_password=%s",
+            "user_id={}, user_email={}, user_name={}, organization_id={}, random_password={}",
             user_id,
             user_email,
             user_name,
@@ -43,7 +41,7 @@ class CognitoService:
             )
         except Exception as e:
             logger.error(
-                "user_id=%s, user_email=%s, user_name=%s, organization_id=%s error=%s",
+                "user_id={}, user_email={}, user_name={}, organization_id={} error={}",
                 user_id,
                 user_email,
                 user_name,
@@ -61,14 +59,14 @@ class CognitoService:
         )
 
     def remove_user(self, user_id: str) -> None:
-        logger.info("user_id: %s", user_id)
+        logger.info("user_id: {}", user_id)
 
         try:
             self.client.admin_delete_user(
                 UserPoolId=COGNITO_USER_POOL_ID, Username=user_id
             )
         except Exception as e:
-            logger.error("user_id=%s, error=%s", user_id, str(e))
+            logger.error("user_id={}, error={}", user_id, str(e))
             raise PrismIdentityException(
                 code=PrismIdentityExceptionCode.FAIL_DELETE_USER,
                 message="Failed to delete user",

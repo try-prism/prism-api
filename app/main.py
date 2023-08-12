@@ -1,4 +1,4 @@
-import logging
+import sys
 from http import HTTPStatus
 
 from api.v1 import (
@@ -13,12 +13,18 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 from fastapi.responses import JSONResponse
+from loguru import logger
 
-log_format = (
-    "%(asctime)s::%(levelname)s "
-    "[%(filename)s:%(lineno)d > %(funcName)s()] %(message)s"
+logger.remove()
+logger.add(
+    sys.stderr,
+    format=(
+        "<green>{time:YYYY-MM-DD HH:mm:ss.SSS!UTC}</green> "
+        "| <level>{level: <5}</level> | <cyan>{file}</cyan>:<cyan>{line}</cyan> "
+        "<yellow>{function}</yellow> - <level>{message}</level>"
+    ),
+    level="INFO",
 )
-logging.basicConfig(level=logging.INFO, format=log_format)
 
 
 app = FastAPI()

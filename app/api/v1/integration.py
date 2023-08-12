@@ -1,4 +1,3 @@
-import logging
 from http import HTTPStatus
 
 from exceptions import (
@@ -8,6 +7,7 @@ from exceptions import (
     PrismMergeException,
 )
 from fastapi import APIRouter, BackgroundTasks, Header
+from loguru import logger
 from models.RequestModels import IntegrationRequest
 from models.ResponseModels import (
     ErrorDTO,
@@ -21,7 +21,6 @@ from storage import DynamoDBService, MergeService
 from tasks.IntegrationTask import initiate_file_processing
 
 router = APIRouter()
-logger = logging.getLogger(__name__)
 
 """
 | Endpoint                           | Description                          | Method |
@@ -74,7 +73,7 @@ async def integration(
         )
     except PrismException as e:
         logger.error(
-            "integration_request=%s, error=%s",
+            "integration_request={}, error={}",
             integration_request,
             e,
         )
@@ -106,7 +105,7 @@ async def get_integration_detail(
             code=HTTPStatus.BAD_REQUEST.value, message="Invalid organization id"
         )
 
-    logger.info("org_id=%s", org_id)
+    logger.info("org_id={}", org_id)
 
     # Retrieve organization's integration details
     dynamodb_service = DynamoDBService()
@@ -114,13 +113,13 @@ async def get_integration_detail(
     try:
         organization = dynamodb_service.get_organization(org_id)
         link_id_map = organization.link_id_map
-        logger.info("org_id=%s, link_id_map=%s", org_id, link_id_map)
+        logger.info("org_id={}, link_id_map={}", org_id, link_id_map)
 
         return IntegrationDetailResponse(
             status=HTTPStatus.OK.value, integrations=link_id_map
         )
     except PrismDBException as e:
-        logger.error("org_id=%s, error=%s", org_id, e)
+        logger.error("org_id={}, error={}", org_id, e)
         raise PrismAPIException(code=e.code.value, message=e.message)
 
 
@@ -145,7 +144,7 @@ async def remove_integration_detail(
         )
 
     logger.info(
-        "org_id=%s, integration_account_token=%s", org_id, integration_account_token
+        "org_id={}, integration_account_token={}", org_id, integration_account_token
     )
 
     dynamodb_service = DynamoDBService()
@@ -172,7 +171,7 @@ async def remove_integration_detail(
         )
     except PrismDBException as e:
         logger.error(
-            "org_id=%s, integration_account_token=%s, error=%s",
+            "org_id={}, integration_account_token={}, error={}",
             org_id,
             integration_account_token,
             e,
@@ -199,7 +198,7 @@ async def generate_link_token(org_id: str):
             message="Invalid GenerateLinkTokenRequest",
         )
 
-    logger.info("org_id=%s", org_id)
+    logger.info("org_id={}", org_id)
 
     dynamodb_service = DynamoDBService()
     merge_service = MergeService()
@@ -212,11 +211,11 @@ async def generate_link_token(org_id: str):
             organization.email,
         )
     except PrismMergeException as e:
-        logger.error("org_id=%s, error=%s", org_id, e)
+        logger.error("org_id={}, error={}", org_id, e)
         raise PrismAPIException(code=e.code.value, message=e.message)
 
     logger.info(
-        "org_id=%s, link_token=%s",
+        "org_id={}, link_token={}",
         org_id,
         link_token,
     )

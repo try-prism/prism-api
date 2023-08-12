@@ -1,5 +1,4 @@
 import datetime
-import logging
 from collections.abc import Sequence
 from typing import IO
 
@@ -9,6 +8,7 @@ from exceptions import PrismDBException, PrismException
 from llama_index import Document
 from llama_index.node_parser import SimpleNodeParser
 from llama_index.schema import BaseNode, TextNode
+from loguru import logger
 from merge.resources.filestorage.types import File
 from ray.data import ActorPoolStrategy, Dataset, from_items
 from ray.data.dataset import MaterializedDataset
@@ -16,8 +16,6 @@ from storage import DynamoDBService, MergeService
 
 from .CustomUnstructuredReader import CustomUnstructuredReader
 from .EmbedNodes import EmbedNodes
-
-logger = logging.getLogger(__name__)
 
 
 class DataPipelineService:
@@ -35,7 +33,7 @@ class DataPipelineService:
         self.not_processed_file_ids: list[str] = []
 
         if not ray.is_initialized():
-            logger.info("Connecting to the ray cluster. ENV=%s", PRISM_ENV)
+            logger.info("Connecting to the ray cluster. ENV={}", PRISM_ENV)
 
             if PRISM_ENV == "PROD":
                 try:
@@ -45,7 +43,7 @@ class DataPipelineService:
                         runtime_env=RAY_RUNTIME_ENV,
                     )
                 except Exception as e:
-                    logger.error("Disconnected from the ray cluster, error=%s", str(e))
+                    logger.error("Disconnected from the ray cluster, error={}", str(e))
                     ray.shutdown()
                     ray.init(
                         RAY_ADDRESS,
@@ -69,7 +67,7 @@ class DataPipelineService:
             )
         except PrismDBException as e:
             logger.error(
-                "org_id=%s, account_token=%s, error=%s",
+                "org_id={}, account_token={}, error={}",
                 self.org_id,
                 self.account_token,
                 e,
@@ -100,13 +98,13 @@ class DataPipelineService:
 
             documents.extend(loaded_doc)
         except PrismException as e:
-            logger.error("file_row=%s, error=%s", file_row, e)
+            logger.error("file_row={}, error={}", file_row, e)
             self.not_processed_file_ids.append(file_row["data"].id)
 
         return [{"doc": doc} for doc in documents]
 
     def load_data(self, all_files: list[File]) -> Dataset:
-        logger.info("Started loading data. account_token=%s", self.account_token)
+        logger.info("Started loading data. account_token={}", self.account_token)
 
         # Get the file data from all files & Create the Ray Dataset pipeline
         all_items = [{"data": file} for file in all_files]
@@ -121,7 +119,7 @@ class DataPipelineService:
             )
         except PrismDBException as e:
             logger.error(
-                "org_id=%s, account_token=%s, error=%s",
+                "org_id={}, account_token={}, error={}",
                 self.org_id,
                 self.account_token,
                 e,
@@ -148,11 +146,11 @@ class DataPipelineService:
         return [{"node": node} for node in nodes]
 
     def generate_nodes(self, loaded_docs: Dataset) -> Dataset:
-        logger.info("Started generating nodes. account_token=%s", self.account_token)
+        logger.info("Started generating nodes. account_token={}", self.account_token)
 
         # Use `flat_map` since there is a 1:N relationship. Each document returns multiple nodes.
         nodes = loaded_docs.flat_map(self.convert_documents_into_nodes)
-        logger.info("Finished generating nodes. account_token=%s", self.account_token)
+        logger.info("Finished generating nodes. account_token={}", self.account_token)
 
         return nodes
 

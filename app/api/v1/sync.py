@@ -1,10 +1,10 @@
-import logging
 from http import HTTPStatus
 
 from constants import DYNAMODB_FILE_TABLE
 from enums import FileOperation
 from exceptions import PrismAPIException, PrismException
 from fastapi import APIRouter
+from loguru import logger
 from merge.resources.filestorage.types import File
 from models import to_file_model
 from models.RequestModels import SyncOrganizationDataRequest
@@ -14,7 +14,7 @@ from storage import DynamoDBService
 from utils import divide_list
 
 router = APIRouter()
-logger = logging.getLogger(__name__)
+
 
 """
 | Endpoint              | Description                                            | Method |
@@ -43,7 +43,7 @@ async def sync_organization_data(
             message="Invalid SyncOrganizationDataRequest",
         )
 
-    logger.info("sync_request=%s, org_id=%s", sync_request, org_id)
+    logger.info("sync_request={}, org_id={}", sync_request, org_id)
 
     dynamodb_service = DynamoDBService()
     data_index_service = DataIndexingService(org_id=org_id)
@@ -89,7 +89,7 @@ async def sync_organization_data(
         nodes = data_pipeline_service.get_embedded_nodes(all_files=files)
         data_index_service.add_nodes(nodes)
     except PrismException as e:
-        logger.error("sync_request=%s, error=%s", sync_request, e)
+        logger.error("sync_request={}, error={}", sync_request, e)
         raise PrismAPIException(
             code=e.code.value,
             message=e.message,

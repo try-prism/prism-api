@@ -1,11 +1,11 @@
 import io
-import logging
 import time
 import uuid
 from typing import IO
 
 from constants import MERGE_API_KEY, SUPPORTED_EXTENSIONS
 from exceptions import PrismMergeException, PrismMergeExceptionCode
+from loguru import logger
 from merge.client import Merge
 from merge.core.api_error import ApiError
 from merge.resources.filestorage.types import (
@@ -16,8 +16,6 @@ from merge.resources.filestorage.types import (
     PaginatedFolderList,
     SyncStatusStatusEnum,
 )
-
-logger = logging.getLogger(__name__)
 
 
 class MergeService:
@@ -37,7 +35,7 @@ class MergeService:
             )
         except Exception as e:
             logger.error(
-                "org_id=%s, org_name=%s, org_email=%s, error=%s",
+                "org_id={}, org_name={}, org_email={}, error={}",
                 org_id,
                 org_name,
                 org_email,
@@ -56,7 +54,7 @@ class MergeService:
                 public_token=public_token
             )
         except Exception as e:
-            logger.error("public_token=%s, error=%s", public_token, str(e))
+            logger.error("public_token={}, error={}", public_token, str(e))
             raise PrismMergeException(
                 code=PrismMergeExceptionCode.COULD_NOT_GENERATE_ACCOUNT_TOKEN,
                 message="Could not generate account token",
@@ -75,7 +73,7 @@ class MergeService:
         try:
             integration_provider = self.client.filestorage.account_details.retrieve()
         except Exception as e:
-            logger.error("account_token=%s, error=%s", self.account_token, str(e))
+            logger.error("account_token={}, error={}", self.account_token, str(e))
             raise PrismMergeException(
                 code=PrismMergeExceptionCode.COULD_NOT_FETCH_INTEGRATION_DETAILS,
                 message="Could not get integration provider details",
@@ -104,7 +102,7 @@ class MergeService:
                     message="Failed to sync",
                 )
         except Exception as e:
-            logger.error("account_token=%s, error=%s", self.account_token, str(e))
+            logger.error("account_token={}, error={}", self.account_token, str(e))
 
             if isinstance(e, PrismMergeException):
                 raise
@@ -131,7 +129,7 @@ class MergeService:
 
         if not folder_id and not drive_id:
             logger.error(
-                "account_token=%s, folder_id=%s, drive_id=%s, next=%s, error=%s",
+                "account_token={}, folder_id={}, drive_id={}, next={}, error={}",
                 self.account_token,
                 folder_id,
                 drive_id,
@@ -149,7 +147,7 @@ class MergeService:
             )
         except Exception as e:
             logger.error(
-                "account_token=%s, folder_id=%s, drive_id=%s, next=%s, error=%s",
+                "account_token={}, folder_id={}, drive_id={}, next={}, error={}",
                 self.account_token,
                 folder_id,
                 drive_id,
@@ -175,7 +173,7 @@ class MergeService:
             file_list = self.client.filestorage.files.list(page_size=100, cursor=next)
         except Exception as e:
             logger.error(
-                "account_token=%s, next=%s, error=%s", self.account_token, next, str(e)
+                "account_token={}, next={}, error={}", self.account_token, next, str(e)
             )
             raise PrismMergeException(
                 code=PrismMergeExceptionCode.COULD_NOT_LIST_FILES,
@@ -196,7 +194,7 @@ class MergeService:
                 file_list.extend(response.results)
             except ApiError as e:
                 logger.info(
-                    "account_token=%s, error=%s, Too many requests. Waiting for 1 min to resume..",
+                    "account_token={}, error={}, Too many requests. Waiting for 1 min to resume..",
                     self.account_token,
                     e,
                 )
@@ -217,7 +215,7 @@ class MergeService:
         file_extension = file.name.split(".")[-1]
 
         if file_extension not in SUPPORTED_EXTENSIONS:
-            logger.error("File type not supported: .%s", file_extension)
+            logger.error("File type not supported: .{}", file_extension)
             raise PrismMergeException(
                 code=PrismMergeExceptionCode.FILE_TYPE_NOT_SUPPORTED,
                 message="File type not supported",
@@ -227,7 +225,7 @@ class MergeService:
             response = self.client.filestorage.files.download_retrieve(id=file.id)
         except Exception as e:
             logger.error(
-                "account_token=%s, file_id=%s, error=%s",
+                "account_token={}, file_id={}, error={}",
                 self.account_token,
                 file.id,
                 str(e),

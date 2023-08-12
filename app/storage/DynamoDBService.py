@@ -1,4 +1,3 @@
-import logging
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -13,6 +12,7 @@ from constants import (
 )
 from enums import IntegrationStatus
 from exceptions import PrismDBException, PrismDBExceptionCode
+from loguru import logger
 from merge.resources.filestorage.types import File
 from models import (
     OrganizationModel,
@@ -27,8 +27,6 @@ from models import (
 )
 from storage import MergeService
 from utils import serialize
-
-logger = logging.getLogger(__name__)
 
 
 def exponential_backoff(func):
@@ -71,7 +69,7 @@ class DynamoDBService:
                 TableName=table_name,
             )
         except ClientError as e:
-            logger.error("table_name=%s, item=%s, error=%s", table_name, item, str(e))
+            logger.error("table_name={}, item={}, error={}", table_name, item, str(e))
             raise PrismDBException(
                 code=PrismDBExceptionCode.ITEM_PUT_ERROR,
                 message="Could not append item to table",
@@ -391,7 +389,7 @@ class DynamoDBService:
             )
 
         logger.info(
-            "Modifying file(s). account_token: %s, len(file_ids)=%s, len(files)=%s, is_remove=%s",
+            "Modifying file(s). account_token: {}, len(file_ids)={}, len(files)={}, is_remove={}",
             account_token,
             len(file_ids),
             len(files),
@@ -413,7 +411,7 @@ class DynamoDBService:
         )
 
         logger.info(
-            "Finished modifying. account_token: %s, len(file_ids)=%s, len(files)=%s, is_remove=%s",
+            "Finished modifying. account_token: {}, len(file_ids)={}, len(files)={}, is_remove={}",
             account_token,
             len(file_ids),
             len(files),
@@ -421,7 +419,7 @@ class DynamoDBService:
         )
 
     def get_all_file_ids_for_integration(self, account_token: str) -> list[str]:
-        logger.info("account_token: %s", account_token)
+        logger.info("account_token: {}", account_token)
 
         ids = []
         table = self.resource.Table(DYNAMODB_FILE_TABLE)
@@ -443,7 +441,7 @@ class DynamoDBService:
                 )
                 ids.extend(response["Items"])
         except ClientError as e:
-            logger.error("account_token: %s, error=%s", account_token, str(e))
+            logger.error("account_token: {}, error={}", account_token, str(e))
             raise PrismDBException(
                 code=PrismDBExceptionCode.ITEM_BATCH_GET_ERROR,
                 message="Failed to retrieve all file ids related to the integration",
@@ -453,13 +451,13 @@ class DynamoDBService:
         return cleaned_ids
 
     def change_org_admin(self, org_id: str, new_admin_id: str) -> None:
-        logger.info("org_id=%s, new_admin_id=%s", org_id, new_admin_id)
+        logger.info("org_id={}, new_admin_id={}", org_id, new_admin_id)
 
         organization = self.get_organization(org_id)
 
         if organization.admin_id != new_admin_id:
             logger.error(
-                "org_id=%s, new_admin_id=%s error=no permission to edit this organization",
+                "org_id={}, new_admin_id={} error=no permission to edit this organization",
                 org_id,
                 new_admin_id,
             )
