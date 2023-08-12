@@ -74,10 +74,19 @@ async def register_organization(
             org_email=register_request.organization_email,
             org_admin_id=register_request.organization_admin_id,
         )
+
+        await invite_user_to_organization(
+            org_id=org_id,
+            invite_request=InviteUserOrganizationRequest(
+                organization_name=register_request.organization_name,
+                organization_user_email=register_request.organization_email,
+            ),
+        )
+
     except PrismDBException as e:
         logger.error("register_request=%s, error=%s", register_request, e)
         return ErrorDTO(
-            code=e.code,
+            code=e.code.value,
             description=e.message,
         )
 
@@ -135,7 +144,7 @@ async def remove_organization(
         logger.error("remove_request=%s, error=%s", remove_request, e)
 
         if isinstance(e, PrismDBException):
-            return ErrorDTO(code=e.code, message=e.message)
+            return ErrorDTO(code=e.code.value, message=e.message)
 
         return ErrorDTO(
             code=HTTPStatus.INTERNAL_SERVER_ERROR.value,
@@ -174,7 +183,7 @@ async def get_organization(
         organization = dynamodb_service.get_organization(org_id)
     except PrismDBException as e:
         logger.error("org_id=%s, error=%s", org_id, e)
-        return ErrorDTO(code=e.code, description=e.message)
+        return ErrorDTO(code=e.code.value, description=e.message)
 
     return GetOrganizationResponse(
         status=HTTPStatus.OK.value,
@@ -221,7 +230,7 @@ async def update_organization(org_id: str, update_request: UpdateOrganizationReq
             "org_id=%s, update_request=%s, error=%s", org_id, update_request, e
         )
         return ErrorDTO(
-            code=e.code,
+            code=e.code.value,
             description=e.message,
         )
 
@@ -276,7 +285,7 @@ async def invite_user_to_organization(
         logger.error(
             "org_id=%s, invite_request=%s, error=%s", org_id, invite_request, e
         )
-        return ErrorDTO(code=e.code, message=e.message)
+        return ErrorDTO(code=e.code.value, message=e.message)
 
     return InviteUserOrganizationResponse(status=HTTPStatus.OK.value)
 
@@ -325,6 +334,6 @@ async def cancel_pending_user_invite(
         logger.error(
             "org_id=%s, cancel_request=%s, error=%s", org_id, cancel_request, e
         )
-        return ErrorDTO(code=e.code, message=e.message)
+        return ErrorDTO(code=e.code.value, message=e.message)
 
     return CancelInviteUserOrganizationResponse(status=HTTPStatus.OK.value)

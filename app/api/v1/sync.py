@@ -91,7 +91,7 @@ async def sync_organization_data(
     except PrismException as e:
         logger.error("sync_request=%s, error=%s", sync_request, e)
         return ErrorDTO(
-            code=e.code,
+            code=e.code.value,
             description=e.message,
         )
 

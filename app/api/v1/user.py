@@ -91,9 +91,9 @@ async def register_user(
             register_request,
             e,
         )
-        return ErrorDTO(code=e.code, message=e.message)
+        return ErrorDTO(code=e.code.value, message=e.message)
 
-    remove_request = cancel_pending_user_invite(
+    remove_request = await cancel_pending_user_invite(
         org_id=whitelist_item.org_id,
         cancel_request=CancelInviteUserOrganizationRequest(
             organization_name=whitelist_item.org_name,
@@ -135,7 +135,7 @@ async def get_user(id: str):
         user = dynamodb_service.get_user(user_id=id)
     except PrismDBException as e:
         logger.error("id=%s, error=%s", id, e)
-        return ErrorDTO(code=e.code, message=e.message)
+        return ErrorDTO(code=e.code.value, message=e.message)
 
     return GetUserResponse(status=HTTPStatus.OK.value, user=user)
 
@@ -167,7 +167,7 @@ async def delete_user(id: str, org_admin_id: str = Header()):
         dynamodb_service.remove_user(user_id=id, org_admin_id=org_admin_id)
     except PrismException as e:
         logger.error("id=%s, org_admin_id=%s, error=%s", id, org_admin_id, e)
-        return ErrorDTO(code=e.code, message=e.message)
+        return ErrorDTO(code=e.code.value, message=e.message)
 
     return DeleteUserResponse(status=HTTPStatus.OK.value)
 
@@ -197,7 +197,7 @@ async def get_invitation_data(id: str):
         whitelist_user = dynamodb_service.get_whitelist_user_data(user_id=id)
     except PrismDBException as e:
         logger.error("id=%s, error=%s", id, e)
-        return ErrorDTO(code=e.code, message=e.message)
+        return ErrorDTO(code=e.code.value, message=e.message)
 
     logger.info("id=%s, whitelist_item=%s", id, whitelist_user)
 

@@ -73,7 +73,7 @@ async def integration(
             integration_request,
             e,
         )
-        return ErrorDTO(code=e.code, description=e.message)
+        return ErrorDTO(code=e.code.value, description=e.message)
 
     # Initiate background task that processes the files to create docstore and index
     background_tasks.add_task(
@@ -116,7 +116,7 @@ async def get_integration_detail(
         )
     except PrismDBException as e:
         logger.error("org_id=%s, error=%s", org_id, e)
-        return ErrorDTO(code=e.code, description=e.message)
+        return ErrorDTO(code=e.code.value, description=e.message)
 
 
 @router.delete(
@@ -172,7 +172,7 @@ async def remove_integration_detail(
             integration_account_token,
             e,
         )
-        return ErrorDTO(code=e.code, description=e.message)
+        return ErrorDTO(code=e.code.value, description=e.message)
 
     return IntegrationRemoveResponse(status=HTTPStatus.OK.value)
 
@@ -208,7 +208,7 @@ async def generate_link_token(org_id: str):
         )
     except PrismMergeException as e:
         logger.error("org_id=%s, error=%s", org_id, e)
-        return ErrorDTO(code=e.code, message=e.message)
+        return ErrorDTO(code=e.code.value, message=e.message)
 
     logger.info(
         "org_id=%s, link_token=%s",
