@@ -1,7 +1,7 @@
-import logging
 import time
 
 from enums import IntegrationStatus
+from loguru import logger
 from models.RequestModels import IntegrationRequest
 from pipeline import DataIndexingService, DataPipelineService
 from storage import DynamoDBService, MergeService
@@ -10,8 +10,8 @@ from storage import DynamoDBService, MergeService
 def initiate_file_processing(
     integration_request: IntegrationRequest, account_token: str
 ) -> None:
-    logging.info(
-        "integration_request: %s, account_token=%s, Starting file processing",
+    logger.info(
+        "integration_request: {}, account_token={}, Starting file processing",
         integration_request,
         account_token,
     )
@@ -45,8 +45,8 @@ def initiate_file_processing(
         )
         data_indexing_service.store_vectors(nodes)
     except Exception as e:
-        logging.error(
-            "integration_request: %s, account_token=%s, error=%s",
+        logger.error(
+            "integration_request: {}, account_token={}, error={}",
             integration_request,
             account_token,
             str(e),

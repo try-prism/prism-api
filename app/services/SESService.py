@@ -1,10 +1,7 @@
-import logging
-
 import boto3
 from constants import DEFAULT_SIGNUP_URL, SES_SENDER_EMAIL
 from exceptions import PrismEmailException, PrismEmailExceptionCode
-
-logger = logging.getLogger(__name__)
+from loguru import logger
 
 
 class SESService:
@@ -17,7 +14,7 @@ class SESService:
         self, org_name: str, org_user_email: str, org_user_id: str
     ) -> None:
         logger.info(
-            "org_name=%s, user_email=%s, org_user_id=%s",
+            "org_name={}, user_email={}, org_user_id={}",
             org_name,
             org_user_email,
             org_user_id,
@@ -60,7 +57,7 @@ class SESService:
             )
         except Exception as e:
             logger.error(
-                "org_name=%s, org_user_email=%s, org_user_id=%s, error=%s",
+                "org_name={}, org_user_email={}, org_user_id={}, error={}",
                 org_name,
                 org_user_email,
                 org_user_id,
@@ -72,7 +69,7 @@ class SESService:
             )
 
         logger.info(
-            "org_name=%s, org_user_email=%s, org_user_id=%s, response=%s",
+            "org_name={}, org_user_email={}, org_user_id={}, response={}",
             org_name,
             org_user_email,
             org_user_id,
@@ -81,7 +78,7 @@ class SESService:
 
     def send_temp_password_email(self, org_user_email: str, temp_password: str) -> None:
         logger.info(
-            "org_user_email=%s, temp_password=%s", org_user_email, temp_password
+            "org_user_email={}, temp_password={}", org_user_email, temp_password
         )
 
         try:
@@ -120,7 +117,7 @@ class SESService:
             )
         except Exception as e:
             logger.info(
-                "org_user_email=%s, temp_password=%s, error=%s",
+                "org_user_email={}, temp_password={}, error={}",
                 org_user_email,
                 temp_password,
                 e,
@@ -131,7 +128,7 @@ class SESService:
             )
 
         logger.info(
-            "org_user_email=%s, temp_password=%s, response=%s",
+            "org_user_email={}, temp_password={}, response={}",
             org_user_email,
             temp_password,
             response,

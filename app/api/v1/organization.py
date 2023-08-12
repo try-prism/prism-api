@@ -1,9 +1,9 @@
-import logging
 import uuid
 from http import HTTPStatus
 
 from exceptions import PrismAPIException, PrismDBException, PrismException
 from fastapi import APIRouter
+from loguru import logger
 from models.RequestModels import (
     CancelInviteUserOrganizationRequest,
     InviteUserOrganizationRequest,
@@ -25,7 +25,7 @@ from services import CognitoService, SESService
 from storage import DynamoDBService
 
 router = APIRouter()
-logger = logging.getLogger(__name__)
+
 
 """
 | Endpoint                             | Description                            | Method |
@@ -63,7 +63,7 @@ async def register_organization(
         )
 
     org_id = str(uuid.uuid4())
-    logger.info("register_request=%s, org_id=%s", register_request, org_id)
+    logger.info("register_request={}, org_id={}", register_request, org_id)
 
     dynamodb_service = DynamoDBService()
 
@@ -84,7 +84,7 @@ async def register_organization(
         )
 
     except PrismDBException as e:
-        logger.error("register_request=%s, error=%s", register_request, e)
+        logger.error("register_request={}, error={}", register_request, e)
         raise PrismAPIException(
             code=e.code.value,
             message=e.message,
@@ -112,7 +112,7 @@ async def remove_organization(
             message="Invalid RemoveOrganizationRequest",
         )
 
-    logger.info("remove_request=%s", remove_request)
+    logger.info("remove_request={}", remove_request)
 
     dynamodb_service = DynamoDBService()
     cognito_service = CognitoService()
@@ -141,7 +141,7 @@ async def remove_organization(
             org_admin_id=remove_request.organization_admin_id,
         )
     except Exception as e:
-        logger.error("remove_request=%s, error=%s", remove_request, e)
+        logger.error("remove_request={}, error={}", remove_request, e)
 
         if isinstance(e, PrismDBException):
             raise PrismAPIException(code=e.code.value, message=e.message)
@@ -151,7 +151,7 @@ async def remove_organization(
             message="Internal server error",
         )
 
-    logger.info("remove_request=%s, response=%s", remove_request, response)
+    logger.info("remove_request={}, response={}", remove_request, response)
 
     return RemoveOrganizationResponse(status=HTTPStatus.OK.value)
 
@@ -175,14 +175,14 @@ async def get_organization(
             message="Invalid organization ID",
         )
 
-    logger.info("org_id=%s", org_id)
+    logger.info("org_id={}", org_id)
 
     dynamodb_service = DynamoDBService()
 
     try:
         organization = dynamodb_service.get_organization(org_id)
     except PrismDBException as e:
-        logger.error("org_id=%s, error=%s", org_id, e)
+        logger.error("org_id={}, error={}", org_id, e)
         raise PrismAPIException(code=e.code.value, message=e.message)
 
     return GetOrganizationResponse(
@@ -208,7 +208,7 @@ async def update_organization(org_id: str, update_request: UpdateOrganizationReq
         or update_request.prev_organization_admin_id
     ):
         logger.error(
-            "org_id=%s, update_request=%s, error=Invalid organization update request",
+            "org_id={}, update_request={}, error=Invalid organization update request",
             org_id,
             update_request,
         )
@@ -217,7 +217,7 @@ async def update_organization(org_id: str, update_request: UpdateOrganizationReq
             message="Invalid organization update request",
         )
 
-    logger.info("org_id=%s, update_request=%s", org_id, update_request)
+    logger.info("org_id={}, update_request={}", org_id, update_request)
 
     dynamodb_service = DynamoDBService()
 
@@ -227,7 +227,7 @@ async def update_organization(org_id: str, update_request: UpdateOrganizationReq
         )
     except PrismDBException as e:
         logger.error(
-            "org_id=%s, update_request=%s, error=%s", org_id, update_request, e
+            "org_id={}, update_request={}, error={}", org_id, update_request, e
         )
         raise PrismAPIException(
             code=e.code.value,
@@ -260,7 +260,7 @@ async def invite_user_to_organization(
             message="Invalid organization invite request",
         )
 
-    logger.info("org_id=%s, invite_request=%s", org_id, invite_request)
+    logger.info("org_id={}, invite_request={}", org_id, invite_request)
 
     dynamodb_service = DynamoDBService()
     ses_serivce = SESService()
@@ -283,7 +283,7 @@ async def invite_user_to_organization(
         )
     except PrismException as e:
         logger.error(
-            "org_id=%s, invite_request=%s, error=%s", org_id, invite_request, e
+            "org_id={}, invite_request={}, error={}", org_id, invite_request, e
         )
         raise PrismAPIException(code=e.code.value, message=e.message)
 
@@ -314,7 +314,7 @@ async def cancel_pending_user_invite(
             message="Invalid user invite cancel request",
         )
 
-    logger.info("org_id=%s, cancel_request=%s", org_id, cancel_request)
+    logger.info("org_id={}, cancel_request={}", org_id, cancel_request)
 
     dynamodb_service = DynamoDBService()
 
@@ -332,7 +332,7 @@ async def cancel_pending_user_invite(
         )
     except PrismDBException as e:
         logger.error(
-            "org_id=%s, cancel_request=%s, error=%s", org_id, cancel_request, e
+            "org_id={}, cancel_request={}, error={}", org_id, cancel_request, e
         )
         raise PrismAPIException(code=e.code.value, message=e.message)
 

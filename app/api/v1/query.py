@@ -1,13 +1,12 @@
-import logging
-
 from connection import ConnectionManager
 from exceptions import PrismDBException, PrismDBExceptionCode
 from fastapi import APIRouter, Header, WebSocket, WebSocketDisconnect
+from loguru import logger
 from pipeline import DataIndexingService
 from storage import DynamoDBService
 
 router = APIRouter()
-logger = logging.getLogger(__name__)
+
 
 """
 | Endpoint                  | Description                              | Method |
