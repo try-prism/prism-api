@@ -5,6 +5,7 @@ import tiktoken
 from constants import (
     COHERE_API_KEY,
     DEFAULT_OPENAI_MODEL,
+    PRISM_ENV,
     ZILLIZ_CLOUD_HOST,
     ZILLIZ_CLOUD_PASSWORD,
     ZILLIZ_CLOUD_PORT,
@@ -42,7 +43,7 @@ class DataIndexingService:
                 port=ZILLIZ_CLOUD_PORT,
                 user=ZILLIZ_CLOUD_USER,
                 password=ZILLIZ_CLOUD_PASSWORD,
-                use_secure=True,
+                use_secure=True if PRISM_ENV == "PROD" else False,
             ),
         )
 
