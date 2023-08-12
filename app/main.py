@@ -16,7 +16,7 @@ from fastapi.responses import JSONResponse
 
 log_format = (
     "%(asctime)s::%(levelname)s "
-    "[%(filename)s::%(lineno)d::%(funcName)20s()] %(message)s"
+    "[%(filename)s:%(lineno)d > %(funcName)s()] %(message)s"
 )
 logging.basicConfig(level=logging.INFO, format=log_format)
 
