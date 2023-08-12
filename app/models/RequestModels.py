@@ -40,7 +40,6 @@ class RegisterUserRequest(BaseModel):
     id: str
     email: str
     name: str
-    is_admin: bool
 
 
 class SyncOrganizationDataRequest(BaseModel):
