@@ -380,22 +380,20 @@ class DynamoDBService:
 
     def modify_file_in_batch(
         self,
-        account_token: str | None,
-        file_ids: list[str] | None,
-        files: list[File] | None,
         is_remove: bool,
+        account_token: str | None = None,
+        file_ids: list[str] | None = None,
+        files: list[File] | None = None,
     ) -> None:
-        if is_remove and not account_token:
+        if not is_remove and not account_token:
             raise PrismDBException(
                 code=PrismDBExceptionCode.INVALID_ARGUMENT,
-                message="account_token is required when removing files",
+                message="account_token is required when adding files",
             )
 
         logger.info(
-            "Modifying file(s). account_token: {}, len(file_ids)={}, len(files)={}, is_remove={}",
+            "Modifying file(s). account_token: {}, is_remove={}",
             account_token,
-            len(file_ids),
-            len(files),
             is_remove,
         )
 
@@ -414,10 +412,8 @@ class DynamoDBService:
         )
 
         logger.info(
-            "Finished modifying. account_token: {}, len(file_ids)={}, len(files)={}, is_remove={}",
+            "Finished modifying. account_token: {}, is_remove={}",
             account_token,
-            len(file_ids),
-            len(files),
             is_remove,
         )
 

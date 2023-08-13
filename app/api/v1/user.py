@@ -8,7 +8,6 @@ from models.RequestModels import (
     RegisterUserRequest,
 )
 from models.ResponseModels import (
-    CancelInviteUserOrganizationResponse,
     DeleteUserResponse,
     ErrorDTO,
     GetInvitationResponse,
@@ -93,19 +92,13 @@ async def register_user(
         )
         raise
 
-    remove_request = await cancel_pending_user_invite(
+    await cancel_pending_user_invite(
         org_id=whitelist_user.org_id,
         cancel_request=CancelInviteUserOrganizationRequest(
             organization_name=whitelist_user.org_name,
             organization_user_id=whitelist_user.id,
         ),
     )
-
-    if type(remove_request) is not CancelInviteUserOrganizationResponse:
-        raise PrismException(
-            code=PrismExceptionCode.BAD_REQUEST,
-            message="Failed to remove user id from whitelist after registration",
-        )
 
     return RegisterUserResponse(status=HTTPStatus.OK.value)
 
