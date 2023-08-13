@@ -314,7 +314,7 @@ async def cancel_pending_user_invite(
 
     try:
         dynamodb_service.modify_invited_users_list(
-            org_id=cancel_request.organization_user_id,
+            org_id=org_id,
             org_user_id=cancel_request.organization_user_id,
             is_remove=True,
         )

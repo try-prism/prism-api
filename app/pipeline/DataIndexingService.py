@@ -10,6 +10,7 @@ from constants import (
     ZILLIZ_CLOUD_PORT,
     ZILLIZ_CLOUD_USER,
 )
+from exceptions import PrismDBException, PrismDBExceptionCode
 from llama_index import (
     ServiceContext,
     StorageContext,
@@ -28,22 +29,31 @@ from llama_index.schema import BaseNode
 from llama_index.vector_stores import MilvusVectorStore
 from llama_index.vector_stores.types import NodeWithEmbedding
 from loguru import logger
-from pymilvus import Collection, MilvusException
+from pymilvus import Collection
+from pymilvus.exceptions import MilvusException
 
 
 class DataIndexingService:
     def __init__(self, org_id: str):
         self.org_id = org_id
-        self.storage_context = StorageContext.from_defaults(
-            vector_store=MilvusVectorStore(
-                collection_name=org_id,
-                host=ZILLIZ_CLOUD_HOST,
-                port=ZILLIZ_CLOUD_PORT,
-                user=ZILLIZ_CLOUD_USER,
-                password=ZILLIZ_CLOUD_PASSWORD,
-                use_secure=True if PRISM_ENV == "PROD" else False,
-            ),
-        )
+
+        try:
+            self.storage_context = StorageContext.from_defaults(
+                vector_store=MilvusVectorStore(
+                    collection_name=org_id,
+                    host=ZILLIZ_CLOUD_HOST,
+                    port=ZILLIZ_CLOUD_PORT,
+                    user=ZILLIZ_CLOUD_USER,
+                    password=ZILLIZ_CLOUD_PASSWORD,
+                    use_secure=True if PRISM_ENV == "PROD" else False,
+                ),
+            )
+        except MilvusException as e:
+            logger.error("org_id={}, error={}", org_id, str(e))
+            raise PrismDBException(
+                code=PrismDBExceptionCode.COULD_NOT_CONNECT_TO_VECTOR_STORE,
+                message="Could not connect to the vector store",
+            )
 
     def store_vectors(self, nodes: Sequence[BaseNode]) -> None:
         logger.info("Storing vectors & index. org_id={}", self.org_id)

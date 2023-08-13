@@ -21,6 +21,7 @@ from models import (
     get_file_key,
     get_organization_key,
     get_user_key,
+    get_whitelist_key,
     to_organization_model,
     to_user_model,
     to_whitelist_model,
@@ -94,7 +95,8 @@ class DynamoDBService:
             TableName=table_name, Key=key, ReturnValues="ALL_OLD"
         )
 
-        if "Item" not in response:
+        # TODO: do we need this?
+        if "Attributes" not in response:
             raise PrismDBException(
                 code=PrismDBExceptionCode.ITEM_DOES_NOT_EXIST,
                 message="Item does not exist",
@@ -166,7 +168,7 @@ class DynamoDBService:
             "name": {"S": org_name},
             "email": {"S": org_email},
             "admin_id": {"S": org_admin_id},
-            "user_list": {"L": [{"S": org_admin_id}]},
+            "user_list": {"L": []},
             "invited_user_list": {"L": []},
             "link_id_map": {"M": {}},
             "document_list": {"L": []},
@@ -211,7 +213,8 @@ class DynamoDBService:
         try:
             if is_remove:
                 self.delete_item(
-                    table_name=DYNAMODB_WHITELIST_TABLE, key={"S": org_user_id}
+                    table_name=DYNAMODB_WHITELIST_TABLE,
+                    key=get_whitelist_key(org_user_id),
                 )
             else:
                 timestamp = str(time.time())
@@ -277,7 +280,7 @@ class DynamoDBService:
             "email": {"S": email},
             "name": {"S": name},
             "organization_id": {"S": organization_id},
-            "access_control": {"M": {}},
+            # "access_control": {"M": {}},
             "created_at": {"S": timestamp},
             "updated_at": {"S": timestamp},
         }

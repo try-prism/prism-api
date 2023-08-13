@@ -4,7 +4,7 @@ from utils import deserialize
 
 class AccessControlModel(BaseModel):
     id: str
-    permissions: str
+    permissions: list
     created_at: str
     updated_at: str
 
