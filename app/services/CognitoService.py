@@ -4,7 +4,8 @@ import boto3
 from constants import COGNITO_USER_POOL_ID
 from exceptions import PrismIdentityException, PrismIdentityExceptionCode
 from loguru import logger
-from services import SESService
+
+from .SESService import SESService
 
 
 class CognitoService:
@@ -14,14 +15,19 @@ class CognitoService:
         self.client = boto3.client("cognito-idp")
 
     def create_user(
-        self, user_id: str, user_email: str, user_name: str, organization_id: str
+        self,
+        user_id: str,
+        user_email: str,
+        first_name: str,
+        last_name: str,
+        organization_id: str,
     ) -> None:
-        random_password = secrets.token_urlsafe(15)
+        random_password = secrets.token_urlsafe(15) + "!"
         logger.info(
-            "user_id={}, user_email={}, user_name={}, organization_id={}, random_password={}",
+            "user_id={}, user_email={}, name={}, organization_id={}, random_password={}",
             user_id,
             user_email,
-            user_name,
+            first_name + " " + last_name,
             organization_id,
             random_password,
         )
@@ -29,10 +35,11 @@ class CognitoService:
         try:
             self.client.admin_create_user(
                 UserPoolId=COGNITO_USER_POOL_ID,
-                Username=user_id,
+                Username=user_email,
                 UserAttributes=[
                     {"Name": "email", "Value": user_email},
-                    {"Name": "custom:name", "Value": user_name},
+                    {"Name": "given_name", "Value": first_name},
+                    {"Name": "family_name", "Value": last_name},
                     {"Name": "custom:organization_id", "Value": organization_id},
                 ],
                 TemporaryPassword=random_password,
@@ -41,10 +48,10 @@ class CognitoService:
             )
         except Exception as e:
             logger.error(
-                "user_id={}, user_email={}, user_name={}, organization_id={} error={}",
+                "user_id={}, user_email={}, name={}, organization_id={} error={}",
                 user_id,
                 user_email,
-                user_name,
+                first_name + " " + last_name,
                 organization_id,
                 str(e),
             )

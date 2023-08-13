@@ -50,7 +50,8 @@ async def register_user(
     if (
         not register_request.id
         or not register_request.email
-        or not register_request.name
+        or not register_request.first_name
+        or not register_request.last_name
     ):
         raise PrismException(
             code=PrismExceptionCode.BAD_REQUEST,
@@ -73,14 +74,15 @@ async def register_user(
         cognito_service.create_user(
             user_id=register_request.email,
             user_email=register_request.email,
-            user_name=register_request.name,
+            first_name=register_request.first_name,
+            last_name=register_request.last_name,
             organization_id=whitelist_user.org_id,
         )
         # Add user to user table
         dynamodb_service.register_user(
             id=register_request.email,
             email=register_request.email,
-            name=register_request.name,
+            name=register_request.first_name + " " + register_request.last_name,
             organization_id=whitelist_user.org_id,
         )
     except PrismException as e:
@@ -161,8 +163,8 @@ async def delete_user(id: str, org_admin_id: str = Header()):
     cognito_service = CognitoService()
 
     try:
-        cognito_service.remove_user(user_id=id)
         dynamodb_service.remove_user(user_id=id, org_admin_id=org_admin_id)
+        cognito_service.remove_user(user_id=id)
     except PrismException as e:
         logger.error("id={}, org_admin_id={}, error={}", id, org_admin_id, e)
         raise

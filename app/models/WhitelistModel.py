@@ -18,3 +18,7 @@ def to_whitelist_model(response: dict) -> WhitelistModel:
         org_id=item.get("org_id", ""),
         created_at=item.get("created_at", ""),
     )
+
+
+def get_whitelist_key(user_id: str) -> dict:
+    return {"id": {"S": user_id}}

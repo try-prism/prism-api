@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 from utils import deserialize
 
-from .AccessControlModel import AccessControlModel, to_access_control_model
+# from .AccessControlModel import AccessControlModel, to_access_control_model
 
 
 class UserModel(BaseModel):
@@ -9,7 +9,7 @@ class UserModel(BaseModel):
     email: str
     name: str
     organization_id: str
-    access_control: AccessControlModel
+    # access_control: AccessControlModel
     created_at: str
     updated_at: str
 
@@ -22,7 +22,7 @@ def to_user_model(response: dict) -> UserModel:
         email=item.get("email", ""),
         name=item.get("name", ""),
         organization_id=item.get("organization_id", ""),
-        access_control=to_access_control_model(item.get("access_control", {})),
+        # access_control=to_access_control_model(item.get("access_control", {})),
         created_at=item.get("created_at", ""),
         updated_at=item.get("updated_at", ""),
     )
