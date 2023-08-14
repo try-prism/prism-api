@@ -34,6 +34,10 @@ DYNAMODB_ORGANIZATION_TABLE = os.environ["DYNAMODB_ORGANIZATION_TABLE"]
 DYNAMODB_WHITELIST_TABLE = os.environ["DYNAMODB_WHITELIST_TABLE"]
 
 
+# DynamoDB Indexes
+DYNAMODB_FILE_TABLE_INDEX = os.environ["DYNAMODB_FILE_TABLE_INDEX"]
+
+
 # SES Configurations
 SES_SENDER_EMAIL = "noreply@tryprism.ai"
 DEFAULT_SIGNUP_URL = "http://tryprism.ai/signup?user="
@@ -65,7 +69,7 @@ SUPPORTED_EXTENSIONS = [
 ]
 
 # https://docs.ray.io/en/latest/ray-core/api/doc/ray.runtime_env.RuntimeEnv.html
-RAY_ADDRESS = os.environ["RAY_ADDRESS"]
+# RAY_ADDRESS = os.environ["RAY_ADDRESS"]
 RAY_RUNTIME_ENV = RuntimeEnv(
     pip=["llama_index", "langchain", "mergepythonclient", "nltk", "unstructured"],
     env_vars={"MERGE_API_KEY": MERGE_API_KEY},

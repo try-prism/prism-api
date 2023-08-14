@@ -40,6 +40,7 @@ class DataIndexingService:
         try:
             self.storage_context = StorageContext.from_defaults(
                 vector_store=MilvusVectorStore(
+                    # collection name can only contain numbers, letters and underscores
                     collection_name=org_id,
                     host=ZILLIZ_CLOUD_HOST,
                     port=ZILLIZ_CLOUD_PORT,
