@@ -32,6 +32,8 @@ ENV DYNAMODB_FILE_TABLE=srv-prism-file
 ENV DYNAMODB_ORGANIZATION_TABLE=srv-prism-organization
 ENV DYNAMODB_WHITELIST_TABLE=srv-prism-whitelist
 
+ENV DYNAMODB_FILE_TABLE_INDEX=account_token-index
+
 ENV COGNITO_USER_POOL_ID=us-east-1_XWeFtvwry
 
 ENV ZILLIZ_CLOUD_HOST=tmp-host

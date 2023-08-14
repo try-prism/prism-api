@@ -150,11 +150,6 @@ async def remove_integration_detail(
     data_index_service = DataIndexingService(org_id=org_id)
 
     try:
-        # Remove organization's integration detail
-        dynamodb_service.remove_integration(
-            org_id=org_id, account_token=integration_account_token
-        )
-
         # Remove data related to this integration from file database
         related_file_ids = dynamodb_service.get_all_file_ids_for_integration(
             account_token=integration_account_token
@@ -167,6 +162,11 @@ async def remove_integration_detail(
         # Remove data related to this integration from organization database
         dynamodb_service.modify_organization_files(
             org_id=org_id, file_ids=related_file_ids, is_remove=True
+        )
+
+        # Remove organization's integration detail
+        dynamodb_service.remove_integration(
+            org_id=org_id, account_token=integration_account_token
         )
     except PrismDBException as e:
         logger.error(

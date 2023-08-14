@@ -6,6 +6,7 @@ from boto3.dynamodb.conditions import Key
 from botocore.exceptions import ClientError
 from constants import (
     DYNAMODB_FILE_TABLE,
+    DYNAMODB_FILE_TABLE_INDEX,
     DYNAMODB_ORGANIZATION_TABLE,
     DYNAMODB_USER_TABLE,
     DYNAMODB_WHITELIST_TABLE,
@@ -445,16 +446,14 @@ class DynamoDBService:
 
         try:
             response = table.query(
-                Select="SPECIFIC_ATTRIBUTES",
-                AttributesToGet=["id"],
+                IndexName=DYNAMODB_FILE_TABLE_INDEX,
                 KeyConditionExpression=Key("account_token").eq(account_token),
             )
             ids.extend(response["Items"])
 
             while "LastEvaluatedKey" in response:
                 response = table.query(
-                    Select="SPECIFIC_ATTRIBUTES",
-                    AttributesToGet=["id"],
+                    IndexName=DYNAMODB_FILE_TABLE_INDEX,
                     KeyConditionExpression=Key("account_token").eq(account_token),
                     ExclusiveStartKey=response["LastEvaluatedKey"],
                 )
@@ -466,7 +465,7 @@ class DynamoDBService:
                 message="Failed to retrieve all file ids related to the integration",
             )
 
-        cleaned_ids = [i["id"]["S"] for i in ids]
+        cleaned_ids = [i["id"] for i in ids]
         return cleaned_ids
 
     def change_org_admin(self, org_id: str, new_admin_id: str) -> None:

@@ -62,7 +62,7 @@ async def register_organization(
             message="Invalid RegisterOrganizationRequest",
         )
 
-    org_id = str(uuid.uuid4())
+    org_id = str(uuid.uuid4()).replace("-", "_")
     logger.info("register_request={}, org_id={}", register_request, org_id)
 
     dynamodb_service = DynamoDBService()
