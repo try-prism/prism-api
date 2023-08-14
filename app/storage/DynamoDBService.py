@@ -26,8 +26,9 @@ from models import (
     to_user_model,
     to_whitelist_model,
 )
-from storage import MergeService
 from utils import serialize
+
+from .MergeService import MergeService
 
 
 def exponential_backoff(func):
@@ -124,13 +125,17 @@ class DynamoDBService:
         return retrieved
 
     def batch_write(self, table_name: str, items: list[dict]) -> None:
+        logger.info(
+            "Running batch write. table_name={}, len(items)={}", table_name, len(items)
+        )
         table = self.resource.Table(table_name)
 
         with table.batch_writer() as batch:
-            for i in range(len(items)):
-                batch.put_item(Item=items[i])
+            for item in items:
+                batch.put_item(Item=item)
 
     def batch_delete(self, table_name: str, keys: list[dict]) -> None:
+        logger.info("Running batch delete. table_name={}, keys={}", table_name, keys)
         table = self.resource.Table(table_name)
 
         with table.batch_writer() as batch:
@@ -140,6 +145,11 @@ class DynamoDBService:
     def parallel_batch_write(
         self, table_name: str, items: list[dict], is_remove: bool
     ) -> None:
+        logger.info(
+            "Running parallel batch write. table_name={}, is_remove={}",
+            table_name,
+            is_remove,
+        )
         ops = self.batch_delete if is_remove else self.batch_write
 
         with ThreadPoolExecutor(max_workers=4) as executor:
@@ -155,6 +165,11 @@ class DynamoDBService:
     def optimized_batch_write(
         self, table_name: str, items: list, is_remove: bool
     ) -> None:
+        logger.info(
+            "Running optimized batch write. table_name={}, is_remove={}",
+            table_name,
+            is_remove,
+        )
         self.parallel_batch_write(
             table_name=table_name, items=items, is_remove=is_remove
         )
@@ -404,8 +419,14 @@ class DynamoDBService:
             for file in files:
                 new_file = file.dict()
                 new_file["account_token"] = account_token
-                file_item = serialize(new_file)
-                items.append(file_item)
+                del new_file["description"]
+                del new_file["remote_data"]
+                del new_file["remote_created_at"]
+                del new_file["remote_updated_at"]
+                new_file["modified_at"] = (
+                    str(file.modified_at.timestamp()) if file.modified_at else ""
+                )
+                items.append(new_file)
 
         self.optimized_batch_write(
             table_name=DYNAMODB_FILE_TABLE, items=items, is_remove=is_remove
