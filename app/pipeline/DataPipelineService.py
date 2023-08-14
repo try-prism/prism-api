@@ -167,6 +167,10 @@ class DataPipelineService:
         so we only initialize the embedding model once.
         """
 
+        logger.info(
+            "Started generating embeddings. account_token={}", self.account_token
+        )
+
         # This state can be reused for multiple batches.
         embedded_nodes = nodes.map_batches(
             EmbedNodes,
@@ -184,5 +188,9 @@ class DataPipelineService:
             node = row["embedded_nodes"]
             assert node.embedding is not None
             embeddings.append(node)
+
+        logger.info(
+            "Finished generating embeddings. account_token={}", self.account_token
+        )
 
         return embeddings

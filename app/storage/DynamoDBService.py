@@ -415,8 +415,8 @@ class DynamoDBService:
         logger.info(
             "org_id={}, account_token={}, status={}", org_id, account_token, status
         )
-        organization = self.get_organization(org_id)
 
+        organization = self.get_organization(org_id)
         link_id_map = organization.link_id_map
         link_id_map[account_token]["status"] = status.value
 
@@ -431,8 +431,8 @@ class DynamoDBService:
             len(file_ids),
             is_remove,
         )
-        organization = self.get_organization(org_id)
 
+        organization = self.get_organization(org_id)
         document_list = organization.document_list
         temp_file_set = set(document_list)
 

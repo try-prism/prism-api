@@ -67,6 +67,8 @@ class MergeService:
         return account_token_response.account_token
 
     def get_integration_provider(self) -> AccountDetails:
+        logger.info("account_token={}", self.account_token)
+
         if not self.account_token:
             logger.error("Account token can't be null")
             raise PrismMergeException(
@@ -147,6 +149,14 @@ class MergeService:
                 message="Either drive id or folder id is required",
             )
 
+        logger.info(
+            "account_token={}, folder_id={}, drive_id={}, next={}",
+            self.account_token,
+            folder_id,
+            drive_id,
+            next,
+        )
+
         try:
             folder_list = self.client.filestorage.folders.list(
                 page_size=100, folder_id=folder_id, drive_id=drive_id, cursor=next
@@ -215,6 +225,10 @@ class MergeService:
     def download_file(
         self, file: File, in_bytes: bool | None = False
     ) -> IO[bytes] | str:
+        logger.info(
+            "file_id={}, file_name={}, in_bytes={}", file.id, file.name, in_bytes
+        )
+
         if not self.account_token:
             logger.error("Account token can't be null")
             raise PrismMergeException(
