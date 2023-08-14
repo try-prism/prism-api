@@ -55,6 +55,12 @@ class DataPipelineService:
                 ray.init(runtime_env=RAY_RUNTIME_ENV)
 
     def get_embedded_nodes(self, all_files: list[File]) -> Sequence[BaseNode]:
+        logger.info(
+            "org_id={}, account_token={}",
+            self.org_id,
+            self.account_token,
+        )
+
         loaded_docs = self.load_data(all_files)
 
         # remove not processed files from the database and organization
@@ -161,6 +167,10 @@ class DataPipelineService:
         so we only initialize the embedding model once.
         """
 
+        logger.info(
+            "Started generating embeddings. account_token={}", self.account_token
+        )
+
         # This state can be reused for multiple batches.
         embedded_nodes = nodes.map_batches(
             EmbedNodes,
@@ -178,5 +188,9 @@ class DataPipelineService:
             node = row["embedded_nodes"]
             assert node.embedding is not None
             embeddings.append(node)
+
+        logger.info(
+            "Finished generating embeddings. account_token={}", self.account_token
+        )
 
         return embeddings

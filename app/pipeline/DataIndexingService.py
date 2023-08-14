@@ -57,7 +57,7 @@ class DataIndexingService:
             )
 
     def store_vectors(self, nodes: Sequence[BaseNode]) -> None:
-        logger.info("Storing vectors & index. org_id={}", self.org_id)
+        logger.info("org_id={}, len(nodes)={}", self.org_id, len(nodes))
 
         vector_index = VectorStoreIndex(
             nodes=nodes, storage_context=self.storage_context
@@ -71,7 +71,7 @@ class DataIndexingService:
 
     def add_nodes(self, nodes: list[NodeWithEmbedding]) -> None:
         logger.info(
-            "Adding nodes. org_id={}, nodes={}",
+            "org_id={}, nodes={}",
             self.org_id,
             nodes,
         )
@@ -86,15 +86,9 @@ class DataIndexingService:
                 e,
             )
 
-        logger.info(
-            "Finished adding nodes. org_id={}, nodes={}",
-            self.org_id,
-            nodes,
-        )
-
     def delete_nodes(self, ref_doc_ids: list[str]) -> None:
         logger.info(
-            "Deleting nodes. org_id={}, ref_doc_ids={}",
+            "org_id={}, ref_doc_ids={}",
             self.org_id,
             ref_doc_ids,
         )
@@ -109,12 +103,6 @@ class DataIndexingService:
                     ref_doc_id,
                     e,
                 )
-
-        logger.info(
-            "Finished deleting nodes. org_id={}, ref_doc_ids={}",
-            self.org_id,
-            ref_doc_ids,
-        )
 
     def drop_collection(self) -> None:
         logger.info(
@@ -138,14 +126,13 @@ class DataIndexingService:
         )
 
     def load_vector_index(self) -> VectorStoreIndex:
-        logger.info(
-            "Loading vector index. org_id={}",
-            self.org_id,
-        )
+        logger.info("org_id={}", self.org_id)
 
         return load_index_from_storage(storage_context=self.storage_context)
 
     def generate_chat_engine(self, vector_index: VectorStoreIndex) -> BaseChatEngine:
+        logger.info("org_id={}, vector_index_id={}", self.org_id, vector_index.index_id)
+
         token_counter = TokenCountingHandler(
             tokenizer=tiktoken.encoding_for_model(DEFAULT_OPENAI_MODEL).encode,
             verbose=True,
