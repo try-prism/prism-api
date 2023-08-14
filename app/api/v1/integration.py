@@ -50,7 +50,6 @@ async def integration(
         not integration_request.public_token
         or not integration_request.organization_id
         or not integration_request.organization_name
-        or not integration_request.email_address
     ):
         raise PrismException(
             code=PrismExceptionCode.BAD_REQUEST, message="Invalid IntegrationRequest"

@@ -21,7 +21,7 @@ class IntegrationResponse(BaseModel):
 
 class IntegrationDetailResponse(BaseModel):
     status: int
-    integrations: list
+    integrations: dict
 
 
 class IntegrationRemoveResponse(BaseModel):

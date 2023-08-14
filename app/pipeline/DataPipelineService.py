@@ -26,9 +26,9 @@ class DataPipelineService:
         self.parser = SimpleNodeParser()
         self.dynamodb_service = DynamoDBService()
         self.merge_service = MergeService(account_token=account_token)
-        current_date = datetime.datetime.now().date()
+        today = datetime.date.today()
         self.process_date = str(
-            datetime.datetime(current_date.year, current_date.month, current_date.day)
+            datetime.datetime(today.year, today.month, today.day).timestamp()
         )
         self.not_processed_file_ids: list[str] = []
 

@@ -7,7 +7,6 @@ class IntegrationRequest(BaseModel):
     public_token: str
     organization_id: str
     organization_name: str
-    email_address: str
 
 
 class RegisterOrganizationRequest(BaseModel):

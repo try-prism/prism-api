@@ -2,7 +2,11 @@ import secrets
 
 import boto3
 from constants import COGNITO_USER_POOL_ID
-from exceptions import PrismIdentityException, PrismIdentityExceptionCode
+from exceptions import (
+    PrismEmailException,
+    PrismIdentityException,
+    PrismIdentityExceptionCode,
+)
 from loguru import logger
 
 from .SESService import SESService
@@ -61,9 +65,20 @@ class CognitoService:
             )
 
         ses_service = SESService()
-        ses_service.send_temp_password_email(
-            org_user_email=user_email, temp_password=random_password
-        )
+
+        try:
+            ses_service.send_temp_password_email(
+                org_user_email=user_email, temp_password=random_password
+            )
+        except PrismEmailException as e:
+            logger.error(
+                "user_id={}, user_email={}, name={}, organization_id={} error={}",
+                user_id,
+                user_email,
+                first_name + " " + last_name,
+                e,
+            )
+            self.remove_user(user_id=user_id)
 
     def remove_user(self, user_id: str) -> None:
         logger.info("user_id: {}", user_id)
