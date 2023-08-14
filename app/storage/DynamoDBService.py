@@ -177,6 +177,14 @@ class DynamoDBService:
     def register_organization(
         self, org_id: str, org_name: str, org_email: str, org_admin_id: str
     ) -> None:
+        logger.info(
+            "org_id={}, org_name={}, org_email={}, org_admin_id={}",
+            org_id,
+            org_name,
+            org_email,
+            org_admin_id,
+        )
+
         timestamp = str(time.time())
         new_organization = {
             "id": {"S": org_id},
@@ -194,6 +202,8 @@ class DynamoDBService:
         self.put_item(DYNAMODB_ORGANIZATION_TABLE, new_organization)
 
     def get_organization(self, org_id: str) -> OrganizationModel:
+        logger.info("org_id={}", org_id)
+
         key = get_organization_key(org_id)
 
         try:
@@ -225,6 +235,14 @@ class DynamoDBService:
     def modify_whitelist(
         self, org_id: str, org_name: str, org_user_id: str, is_remove: bool
     ) -> None:
+        logger.info(
+            "org_id={}, org_name={}, org_user_id={}, is_remove={}",
+            org_id,
+            org_name,
+            org_user_id,
+            is_remove,
+        )
+
         try:
             if is_remove:
                 self.delete_item(
@@ -249,6 +267,13 @@ class DynamoDBService:
     def modify_invited_users_list(
         self, org_id: str, org_user_id: str, is_remove: bool
     ) -> None:
+        logger.info(
+            "org_id={}, org_user_id={}, is_remove={}",
+            org_id,
+            org_user_id,
+            is_remove,
+        )
+
         organization = self.get_organization(org_id)
         invited_user_list = organization.invited_user_list
 
@@ -277,6 +302,8 @@ class DynamoDBService:
             raise
 
     def get_whitelist_user_data(self, user_id: str) -> WhitelistModel:
+        logger.info("user_id={}", user_id)
+
         key = get_user_key(user_id)
 
         try:
@@ -289,6 +316,14 @@ class DynamoDBService:
     def register_user(
         self, id: str, email: str, name: str, organization_id: str
     ) -> None:
+        logger.info(
+            "id={}, email={}, name={}, organization_id={}",
+            id,
+            email,
+            name,
+            organization_id,
+        )
+
         timestamp = str(time.time())
         new_user = {
             "id": {"S": id},
@@ -312,6 +347,8 @@ class DynamoDBService:
             raise
 
     def get_user(self, user_id: str) -> UserModel:
+        logger.info("user_id={}", user_id)
+
         try:
             response = self.get_item(DYNAMODB_USER_TABLE, get_user_key(user_id))
             return to_user_model(response)
@@ -320,6 +357,8 @@ class DynamoDBService:
             raise
 
     def remove_user(self, user_id: str, org_admin_id: str) -> dict:
+        logger("user_id={}, org_admin_id={}", user_id, org_admin_id)
+
         user = self.get_user(user_id)
         organization = self.get_organization(org_id=user.organization_id)
 
@@ -342,6 +381,8 @@ class DynamoDBService:
             )
 
     def add_integration(self, org_id: str, account_token: str) -> None:
+        logger.info("org_id={}, account_token={}", org_id, account_token)
+
         merge_service = MergeService(account_token=account_token)
 
         organization = self.get_organization(org_id)
@@ -359,6 +400,8 @@ class DynamoDBService:
         self.put_item(DYNAMODB_ORGANIZATION_TABLE, serialize(organization.dict()))
 
     def remove_integration(self, org_id: str, account_token: str) -> None:
+        logger.info("org_id={}, account_token={}", org_id, account_token)
+
         organization = self.get_organization(org_id)
 
         link_id_map = organization.link_id_map
@@ -369,6 +412,9 @@ class DynamoDBService:
     def modify_integration_status(
         self, org_id: str, account_token: str, status: IntegrationStatus
     ) -> None:
+        logger.info(
+            "org_id={}, account_token={}, status={}", org_id, account_token, status
+        )
         organization = self.get_organization(org_id)
 
         link_id_map = organization.link_id_map
@@ -379,6 +425,12 @@ class DynamoDBService:
     def modify_organization_files(
         self, org_id: str, file_ids: list[str], is_remove: bool
     ) -> None:
+        logger.info(
+            "org_id={}, len(file_ids)={}, is_remove={}",
+            org_id,
+            len(file_ids),
+            is_remove,
+        )
         organization = self.get_organization(org_id)
 
         document_list = organization.document_list
@@ -407,7 +459,7 @@ class DynamoDBService:
             )
 
         logger.info(
-            "Modifying file(s). account_token: {}, is_remove={}",
+            "account_token={}, is_remove={}",
             account_token,
             is_remove,
         )
@@ -432,14 +484,8 @@ class DynamoDBService:
             table_name=DYNAMODB_FILE_TABLE, items=items, is_remove=is_remove
         )
 
-        logger.info(
-            "Finished modifying. account_token: {}, is_remove={}",
-            account_token,
-            is_remove,
-        )
-
     def get_all_file_ids_for_integration(self, account_token: str) -> list[str]:
-        logger.info("account_token: {}", account_token)
+        logger.info("account_token={}", account_token)
 
         ids = []
         table = self.resource.Table(DYNAMODB_FILE_TABLE)
@@ -459,7 +505,7 @@ class DynamoDBService:
                 )
                 ids.extend(response["Items"])
         except ClientError as e:
-            logger.error("account_token: {}, error={}", account_token, str(e))
+            logger.error("account_token={}, error={}", account_token, str(e))
             raise PrismDBException(
                 code=PrismDBExceptionCode.ITEM_BATCH_GET_ERROR,
                 message="Failed to retrieve all file ids related to the integration",

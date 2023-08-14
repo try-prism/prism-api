@@ -55,6 +55,12 @@ class DataPipelineService:
                 ray.init(runtime_env=RAY_RUNTIME_ENV)
 
     def get_embedded_nodes(self, all_files: list[File]) -> Sequence[BaseNode]:
+        logger.info(
+            "org_id={}, account_token={}",
+            self.org_id,
+            self.account_token,
+        )
+
         loaded_docs = self.load_data(all_files)
 
         # remove not processed files from the database and organization

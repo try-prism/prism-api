@@ -81,7 +81,7 @@ class CognitoService:
             self.remove_user(user_id=user_id)
 
     def remove_user(self, user_id: str) -> None:
-        logger.info("user_id: {}", user_id)
+        logger.info("user_id={}", user_id)
 
         try:
             self.client.admin_delete_user(
