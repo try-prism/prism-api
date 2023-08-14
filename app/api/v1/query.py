@@ -52,6 +52,5 @@ async def query(websocket: WebSocket, org_id: str = Header(), user_id: str = Hea
             logger.debug("source_nodes=%s", response.source_nodes)
     except WebSocketDisconnect:
         manager.disconnect(websocket)
-        await manager.broadcast(f"Client #{user_id} left the chat")
 
     logger.info("org_id: %s, user_id: %s, Session Ended", org_id, user_id)

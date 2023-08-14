@@ -18,7 +18,6 @@ from models import (
     OrganizationModel,
     UserModel,
     WhitelistModel,
-    get_file_key,
     get_organization_key,
     get_user_key,
     get_whitelist_key,
@@ -413,7 +412,7 @@ class DynamoDBService:
         )
 
         if is_remove:
-            items = [get_file_key(file_id) for file_id in file_ids]
+            items = [{"id": file_id} for file_id in file_ids]
         else:
             items = []
             for file in files:
