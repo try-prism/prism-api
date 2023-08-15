@@ -24,26 +24,27 @@ module "vpc" {
 }
 
 # ECR repository
-resource "aws_ecr_repository" "prismapi" {
+resource "aws_ecr_repository" "prism" {
   name = var.ecr_name
 }
 
 # ECS cluster
-resource "aws_ecs_cluster" "prismapi" {
+resource "aws_ecs_cluster" "prism" {
   name = var.ecs_cluster_name
 }
 
 # ECS task definition
-resource "aws_ecs_task_definition" "prismapi" {
+resource "aws_ecs_task_definition" "prism" {
   family                   = var.ecs_task_name
   requires_compatibilities = ["FARGATE"]
   network_mode             = "awsvpc"
   cpu                      = 1024
   memory                   = 2048
+  execution_role_arn       = data.aws_iam_role.ecs_task_execution_role.arn
   container_definitions = jsonencode([
     {
-      "name" : "prismapi",
-      "image" : "${aws_ecr_repository.prismapi.repository_url}:latest",
+      "name" : "prism",
+      "image" : "${aws_ecr_repository.prism.repository_url}:latest",
       "portMappings" : [
         {
           "containerPort" : 80,
@@ -55,15 +56,18 @@ resource "aws_ecs_task_definition" "prismapi" {
 }
 
 # ECS service
-resource "aws_ecs_service" "prismapi" {
+resource "aws_ecs_service" "prism" {
   name            = var.ecs_service_name
-  cluster         = aws_ecs_cluster.prismapi.id
-  task_definition = aws_ecs_task_definition.prismapi.arn
+  cluster         = aws_ecs_cluster.prism.id
+  task_definition = aws_ecs_task_definition.prism.arn
   desired_count   = 1
+  network_configuration {
+    subnets = module.vpc.private_subnets
+  }
 }
 
 # LB 
-resource "aws_lb" "prismapi" {
+resource "aws_lb" "prism" {
   name     = var.lb_name
   internal = false
 
@@ -72,7 +76,7 @@ resource "aws_lb" "prismapi" {
 }
 
 # LB Target Group
-resource "aws_lb_target_group" "prismapi" {
+resource "aws_lb_target_group" "prism" {
   name     = var.target_group_name
   port     = 80
   protocol = "HTTP"
@@ -80,13 +84,13 @@ resource "aws_lb_target_group" "prismapi" {
 }
 
 # LB listener
-resource "aws_lb_listener" "prismapi" {
-  load_balancer_arn = aws_lb.prismapi.arn
+resource "aws_lb_listener" "prism" {
+  load_balancer_arn = aws_lb.prism.arn
   port              = 80
   protocol          = "HTTP"
 
   default_action {
     type             = "forward"
-    target_group_arn = aws_lb_target_group.prismapi.arn
+    target_group_arn = aws_lb_target_group.prism.arn
   }
 }
