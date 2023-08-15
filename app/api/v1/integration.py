@@ -55,7 +55,7 @@ async def integration(
             code=PrismExceptionCode.BAD_REQUEST, message="Invalid IntegrationRequest"
         )
 
-    logger.info(integration_request)
+    logger.info("integration_request={}", integration_request)
 
     merge_service = MergeService()
     dynamodb_service = DynamoDBService()

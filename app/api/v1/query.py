@@ -1,7 +1,12 @@
+import json
+
 from connection import ConnectionManager
+from constants import DYNAMODB_FILE_TABLE
 from exceptions import PrismDBException, PrismDBExceptionCode
 from fastapi import APIRouter, Header, WebSocket, WebSocketDisconnect
+from llama_index.schema import NodeRelationship
 from loguru import logger
+from models import to_file_model
 from pipeline import DataIndexingService
 from storage import DynamoDBService
 
@@ -49,7 +54,29 @@ async def query(websocket: WebSocket, org_id: str = Header(), user_id: str = Hea
             user_text = await websocket.receive_text()
             response = await chat_engine.achat(message=user_text)
             await manager.send_message(response.response, websocket)
-            logger.debug("source_nodes=%s", response.source_nodes)
+
+            try:
+                source_node_ids = set(
+                    [
+                        i.node.relationships[NodeRelationship.SOURCE].node_id
+                        for i in response.source_nodes
+                    ]
+                )
+
+                batch_data = dynamodb_service.batch_get_item(
+                    DYNAMODB_FILE_TABLE, "id", list(source_node_ids)
+                )
+                files = [to_file_model(i) for i in batch_data]
+                file_mapping = [{"name": i.name, "url": i.file_url} for i in files]
+
+                await manager.send_message(
+                    f"**SOURCE**{json.dumps(file_mapping)}", websocket
+                )
+            except Exception as e:
+                logger.error(
+                    "user_text=%s, response=%s, error=%s", user_text, response, e
+                )
+                await manager.send_message("**FAIL**", websocket)
     except WebSocketDisconnect:
         manager.disconnect(websocket)
 
