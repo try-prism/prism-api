@@ -1,5 +1,7 @@
 provider "aws" {
-  region = local.region
+  region                   = local.region
+  shared_credentials_files = ["$HOME/.aws/credentials"]
+  profile                  = "default"
 }
 
 locals {
@@ -50,12 +52,6 @@ resource "aws_ecs_task_definition" "prismapi" {
       ]
     }
   ])
-
-  network_configuration {
-    subnets          = module.vpc.private_subnets
-    security_groups  = [module.vpc.ecs_sg_id]
-    assign_public_ip = true
-  }
 }
 
 # ECS service

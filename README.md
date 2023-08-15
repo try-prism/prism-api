@@ -90,6 +90,12 @@ brew install hashicorp/tap/terraform
 terraform -help
 ```
 
+3. Enable DEBUG logging (if you want to)
+
+```bash
+export TF_LOG=DEBUG
+```
+
 ## ETC
 
 ### Delete **pycache**
