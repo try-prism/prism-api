@@ -6,6 +6,21 @@ locals {
   region = "us-east-1"
 }
 
+# VPC
+module "vpc" {
+  source = "terraform-aws-modules/vpc/aws"
+
+  name = var.vpc_name
+  cidr = "10.0.0.0/16"
+
+  azs             = ["us-east-1a", "us-east-1b"]
+  private_subnets = ["10.0.1.0/24", "10.0.2.0/24"]
+  public_subnets  = ["10.0.101.0/24", "10.0.102.0/24"]
+
+  enable_nat_gateway = true
+  enable_vpn_gateway = true
+}
+
 # ECR repository
 resource "aws_ecr_repository" "prismapi" {
   name = var.ecr_name
@@ -35,21 +50,12 @@ resource "aws_ecs_task_definition" "prismapi" {
       ]
     }
   ])
-}
 
-# VPC
-resource "aws_vpc" "main" {
-  cidr_block = "10.0.0.0/16"
-}
-
-# Public subnets
-resource "aws_subnet" "public_1" {
-  vpc_id     = aws_vpc.main.id
-  cidr_block = "10.0.1.0/24"
-}
-resource "aws_subnet" "public_2" {
-  vpc_id     = aws_vpc.main.id
-  cidr_block = "10.0.2.0/24"
+  network_configuration {
+    subnets          = module.vpc.private_subnets
+    security_groups  = [module.vpc.ecs_sg_id]
+    assign_public_ip = true
+  }
 }
 
 # ECS service
@@ -66,10 +72,7 @@ resource "aws_lb" "prismapi" {
   internal = false
 
   load_balancer_type = "application"
-  subnets = [
-    aws_subnet.public_1.id,
-    aws_subnet.public_2.id
-  ]
+  subnets            = module.vpc.public_subnets
 }
 
 # LB Target Group
@@ -77,7 +80,7 @@ resource "aws_lb_target_group" "prismapi" {
   name     = var.target_group_name
   port     = 80
   protocol = "HTTP"
-  vpc_id   = aws_vpc.main.id
+  vpc_id   = module.vpc.vpc_id
 }
 
 # LB listener

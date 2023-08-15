@@ -24,6 +24,13 @@ variable "ecs_service_name" {
   default     = "prism-api-service"
 }
 
+# VPC
+variable "vpc_name" {
+  description = "Name of the VPC"
+  type        = string
+  default     = "prism-api-vpc"
+}
+
 # LB
 variable "lb_name" {
   description = "Name of the Application Load Balancer"
