@@ -62,7 +62,8 @@ resource "aws_ecs_service" "prism" {
   task_definition = aws_ecs_task_definition.prism.arn
   desired_count   = 1
   network_configuration {
-    subnets = module.vpc.private_subnets
+    subnets         = module.vpc.private_subnets
+    security_groups = [module.vpc.default_security_group_id]
   }
 }
 
