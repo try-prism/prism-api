@@ -45,4 +45,6 @@ ENV RAY_ADDRESS=ray://<app_name>-ray-head:10001
 
 ENV PRISM_ENV=PROD
 
+EXPOSE 8000
+
 COPY ./app /app

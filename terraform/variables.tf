@@ -1,3 +1,9 @@
+variable "region" {
+  description = "Default region"
+  type        = string
+  default     = "us-east-1"
+}
+
 # ECR
 variable "ecr_name" {
   description = "Name of the ECR repository"
