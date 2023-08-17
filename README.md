@@ -73,6 +73,29 @@ Use the following command
 poetry add [PACKAGE_NAME]
 ```
 
+## Terraform
+
+### Setup
+
+1. Install Terraform
+
+```bash
+brew tap hashicorp/tap
+brew install hashicorp/tap/terraform
+```
+
+2. Verify the installation
+
+```bash
+terraform -help
+```
+
+3. Enable DEBUG logging (if you want to)
+
+```bash
+export TF_LOG=DEBUG
+```
+
 ## ETC
 
 ### Delete **pycache**
