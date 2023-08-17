@@ -148,6 +148,7 @@ async def remove_integration_detail(
 
     dynamodb_service = DynamoDBService()
     data_index_service = DataIndexingService(org_id=org_id)
+    merge_service = MergeService(account_token=integration_account_token)
 
     try:
         # Remove data related to this integration from file database
@@ -168,7 +169,10 @@ async def remove_integration_detail(
         dynamodb_service.remove_integration(
             org_id=org_id, account_token=integration_account_token
         )
-    except PrismDBException as e:
+
+        # Remove link from Merge
+        merge_service.remove_integration()
+    except PrismException as e:
         logger.error(
             "org_id={}, integration_account_token={}, error={}",
             org_id,

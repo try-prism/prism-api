@@ -269,3 +269,13 @@ class MergeService:
                 f.write(chunk)
 
         return tmp_uuid
+
+    def remove_integration(self) -> None:
+        try:
+            self.client.filestorage.delete_account.delete()
+        except Exception as e:
+            logger.error("account_token={}, error={}", self.account_token, str(e))
+            raise PrismMergeException(
+                code=PrismMergeExceptionCode.COULD_NOT_DELETE_INTEGRATION,
+                message="Could not delete integration",
+            )

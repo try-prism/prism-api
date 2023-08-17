@@ -69,7 +69,7 @@ SUPPORTED_EXTENSIONS = [
 ]
 
 # https://docs.ray.io/en/latest/ray-core/api/doc/ray.runtime_env.RuntimeEnv.html
-RAY_ADDRESS = os.environ["RAY_ADDRESS"]
+# RAY_ADDRESS = os.environ["RAY_ADDRESS"]
 RAY_RUNTIME_ENV = RuntimeEnv(
     pip=["llama_index", "langchain", "mergepythonclient", "nltk", "unstructured"],
     env_vars={"MERGE_API_KEY": MERGE_API_KEY},
