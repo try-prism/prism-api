@@ -30,7 +30,7 @@ class MergeService:
 
         try:
             link_token_response = self.client.filestorage.link_token.create(
-                end_user_origin_id=org_id,
+                end_user_origin_id=str(uuid.uuid4()),
                 end_user_organization_name=org_name,
                 end_user_email_address=org_email,
                 categories=[CategoriesEnum.FILESTORAGE],
