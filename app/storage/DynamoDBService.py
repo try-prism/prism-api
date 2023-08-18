@@ -266,16 +266,30 @@ class DynamoDBService:
             raise
 
     def modify_invited_users_list(
-        self, org_id: str, org_user_id: str, is_remove: bool
+        self, org_id: str, org_user_id: str, org_admin_id: str, is_remove: bool
     ) -> None:
         logger.info(
-            "org_id={}, org_user_id={}, is_remove={}",
+            "org_id={}, org_user_id={}, org_admin_id={}, is_remove={}",
             org_id,
             org_user_id,
             is_remove,
         )
 
         organization = self.get_organization(org_id)
+
+        if organization.admin_id != org_admin_id:
+            logger.error(
+                "org_id={}, org_user_id={}, org_admin_id={}, is_remove={}, error={}",
+                org_id,
+                org_user_id,
+                is_remove,
+                "You don't have permission",
+            )
+            raise PrismDBException(
+                code=PrismDBExceptionCode.NOT_ENOUGH_PERMISSION,
+                message="You don't have permission",
+            )
+
         invited_user_list = organization.invited_user_list
 
         if is_remove:
@@ -381,12 +395,20 @@ class DynamoDBService:
                 message="User does not exist",
             )
 
-    def add_integration(self, org_id: str, account_token: str) -> None:
+    def add_integration(
+        self, org_id: str, org_admin_id: str, account_token: str
+    ) -> None:
         logger.info("org_id={}, account_token={}", org_id, account_token)
 
         merge_service = MergeService(account_token=account_token)
 
         organization = self.get_organization(org_id)
+
+        if organization.admin_id != org_admin_id:
+            raise PrismDBException(
+                code=PrismDBExceptionCode.NOT_ENOUGH_PERMISSION,
+                message="You don't have permission to access this",
+            )
 
         timestamp = str(time.time())
         link_id_map = organization.link_id_map
@@ -523,9 +545,10 @@ class DynamoDBService:
 
         if organization.admin_id != new_admin_id:
             logger.error(
-                "org_id={}, new_admin_id={} error=no permission to edit this organization",
+                "org_id={}, new_admin_id={} error={}",
                 org_id,
                 new_admin_id,
+                "You don't have permission to edit this organization",
             )
             raise PrismDBException(
                 code=PrismDBExceptionCode.NOT_ENOUGH_PERMISSION,

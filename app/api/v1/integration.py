@@ -8,7 +8,7 @@ from exceptions import (
 )
 from fastapi import APIRouter, BackgroundTasks, Header
 from loguru import logger
-from models.RequestModels import IntegrationRequest
+from models.RequestModels import IntegrationRemoveRequest, IntegrationRequest
 from models.ResponseModels import (
     ErrorDTO,
     GenerateLinkTokenResponse,
@@ -50,6 +50,7 @@ async def integration(
         not integration_request.public_token
         or not integration_request.organization_id
         or not integration_request.organization_name
+        or not integration_request.organization_admin_id
     ):
         raise PrismException(
             code=PrismExceptionCode.BAD_REQUEST, message="Invalid IntegrationRequest"
@@ -68,6 +69,7 @@ async def integration(
         # Add account_token to organization's link_id_map
         dynamodb_service.add_integration(
             org_id=integration_request.organization_id,
+            org_admin_id=integration_request.organization_admin_id,
             account_token=account_token,
         )
     except PrismException as e:
@@ -134,16 +136,24 @@ async def get_integration_detail(
 )
 async def remove_integration_detail(
     org_id: str,
+    remove_request: IntegrationRemoveRequest,
     integration_account_token: str = Header(),
 ):
-    if not org_id or not integration_account_token:
+    if (
+        not org_id
+        or not integration_account_token
+        or not remove_request.organization_admin_id
+    ):
         raise PrismException(
             code=PrismExceptionCode.BAD_REQUEST,
-            message="Invalid organization id or account token",
+            message="Invalid organization id or account token or admin id",
         )
 
     logger.info(
-        "org_id={}, integration_account_token={}", org_id, integration_account_token
+        "org_id={}, integration_account_token={}, remove_request={}",
+        org_id,
+        integration_account_token,
+        remove_request,
     )
 
     dynamodb_service = DynamoDBService()
@@ -151,6 +161,21 @@ async def remove_integration_detail(
     merge_service = MergeService(account_token=integration_account_token)
 
     try:
+        organization = dynamodb_service.get_organization(org_id=org_id)
+
+        # Check if the user is an admin of the organization
+        if organization.admin_id != remove_request.organization_admin_id:
+            logger.error(
+                "org_id={}, integration_account_token={}, remove_request={}, error={}",
+                org_id,
+                integration_account_token,
+                remove_request,
+                "You don't have permission",
+            )
+            raise PrismException(
+                code=PrismExceptionCode.BAD_REQUEST, message="You don't have permission"
+            )
+
         # Remove data related to this integration from file database
         related_file_ids = dynamodb_service.get_all_file_ids_for_integration(
             account_token=integration_account_token
@@ -174,9 +199,10 @@ async def remove_integration_detail(
         merge_service.remove_integration()
     except PrismException as e:
         logger.error(
-            "org_id={}, integration_account_token={}, error={}",
+            "org_id={}, integration_account_token={}, remove_request={}, error={}",
             org_id,
             integration_account_token,
+            remove_request,
             e,
         )
         raise
