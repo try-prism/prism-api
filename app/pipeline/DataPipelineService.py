@@ -3,7 +3,7 @@ from collections.abc import Sequence
 from typing import IO
 
 import ray
-from constants import PRISM_ENV, RAY_RUNTIME_ENV
+from constants import PRISM_ENV, RAY_ADDRESS, RAY_RUNTIME_ENV
 from exceptions import PrismDBException, PrismException
 from llama_index import Document
 from llama_index.node_parser import SimpleNodeParser
@@ -35,24 +35,24 @@ class DataPipelineService:
         if not ray.is_initialized():
             logger.info("Connecting to the ray cluster. ENV={}", PRISM_ENV)
 
-            # if PRISM_ENV == "PROD":
-            #     try:
-            #         ray.init(
-            #             RAY_ADDRESS,
-            #             ignore_reinit_error=True,
-            #             runtime_env=RAY_RUNTIME_ENV,
-            #         )
-            #     except Exception as e:
-            #         logger.error("Disconnected from the ray cluster, error={}", str(e))
-            #         ray.shutdown()
-            #         ray.init(
-            #             RAY_ADDRESS,
-            #             ignore_reinit_error=True,
-            #             runtime_env=RAY_RUNTIME_ENV,
-            #         )
-            #         logger.error("Connecting to the ray cluster")
-            # else:
-            ray.init(runtime_env=RAY_RUNTIME_ENV)
+            if PRISM_ENV == "PROD":
+                try:
+                    ray.init(
+                        RAY_ADDRESS,
+                        ignore_reinit_error=True,
+                        runtime_env=RAY_RUNTIME_ENV,
+                    )
+                except Exception as e:
+                    logger.error("Disconnected from the ray cluster, error={}", str(e))
+                    ray.shutdown()
+                    ray.init(
+                        RAY_ADDRESS,
+                        ignore_reinit_error=True,
+                        runtime_env=RAY_RUNTIME_ENV,
+                    )
+                    logger.error("Connecting to the ray cluster")
+            else:
+                ray.init(runtime_env=RAY_RUNTIME_ENV)
 
     def get_embedded_nodes(self, all_files: list[File]) -> Sequence[BaseNode]:
         logger.info(
