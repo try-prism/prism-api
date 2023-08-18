@@ -80,6 +80,7 @@ async def register_organization(
             invite_request=InviteUserOrganizationRequest(
                 organization_name=register_request.organization_name,
                 organization_user_email=register_request.organization_email,
+                organization_admin_id=register_request.organization_admin_id,
             ),
         )
 
@@ -248,6 +249,7 @@ async def invite_user_to_organization(
         not org_id
         or not invite_request.organization_name
         or not invite_request.organization_user_email
+        or not invite_request.organization_admin_id
     ):
         raise PrismException(
             code=PrismExceptionCode.BAD_REQUEST,
@@ -262,7 +264,10 @@ async def invite_user_to_organization(
 
     try:
         dynamodb_service.modify_invited_users_list(
-            org_id=org_id, org_user_id=org_user_id, is_remove=False
+            org_id=org_id,
+            org_user_id=org_user_id,
+            org_admin_id=invite_request.organization_admin_id,
+            is_remove=False,
         )
         dynamodb_service.modify_whitelist(
             org_id=org_id,
@@ -302,6 +307,7 @@ async def cancel_pending_user_invite(
         not org_id
         or not cancel_request.organization_name
         or not cancel_request.organization_user_id
+        or not cancel_request.organization_admin_id
     ):
         raise PrismException(
             code=PrismExceptionCode.BAD_REQUEST,
@@ -316,6 +322,7 @@ async def cancel_pending_user_invite(
         dynamodb_service.modify_invited_users_list(
             org_id=org_id,
             org_user_id=cancel_request.organization_user_id,
+            org_admin_id=cancel_request.organization_admin_id,
             is_remove=True,
         )
         dynamodb_service.modify_whitelist(

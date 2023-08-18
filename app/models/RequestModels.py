@@ -7,6 +7,11 @@ class IntegrationRequest(BaseModel):
     public_token: str
     organization_id: str
     organization_name: str
+    organization_admin_id: str
+
+
+class IntegrationRemoveRequest(BaseModel):
+    organization_admin_id: str
 
 
 class RegisterOrganizationRequest(BaseModel):
@@ -28,11 +33,13 @@ class UpdateOrganizationRequest(BaseModel):
 class InviteUserOrganizationRequest(BaseModel):
     organization_name: str
     organization_user_email: str
+    organization_admin_id: str
 
 
 class CancelInviteUserOrganizationRequest(BaseModel):
     organization_name: str
     organization_user_id: str
+    organization_admin_id: str
 
 
 class GetUsersRequest(BaseModel):
