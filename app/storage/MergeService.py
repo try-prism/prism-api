@@ -87,6 +87,28 @@ class MergeService:
 
         return integration_provider
 
+    def get_account_owner(self) -> str:
+        logger.info("account_token={}", self.account_token)
+
+        if not self.account_token:
+            logger.error("Account token can't be null")
+            raise PrismMergeException(
+                code=PrismMergeExceptionCode.INVALID_ACCOUNT_TOKEN,
+                message="Account token can't be null",
+            )
+
+        try:
+            response = self.client.filestorage.users.list(is_me=True)
+            owner = response.results[0].email_address
+        except Exception as e:
+            logger.error("account_token={}, error={}", self.account_token, str(e))
+            raise PrismMergeException(
+                code=PrismMergeExceptionCode.COULD_NOT_FETCH_INTEGRATION_DETAILS,
+                message="Could not get integration provider details",
+            )
+
+        return owner
+
     def check_sync_status(self) -> bool:
         logger.info("account_token={}", self.account_token)
 
