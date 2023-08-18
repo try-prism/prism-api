@@ -81,9 +81,12 @@ async def sync_organization_data(
         # Get files
         for batch in file_id_batch:
             batch_data = dynamodb_service.batch_get_item(
-                DYNAMODB_FILE_TABLE, "id", batch
+                table_name=DYNAMODB_FILE_TABLE,
+                field_name="id",
+                field_type="S",
+                field_values=batch,
             )
-            files.extend([to_file_model(i) for i in batch_data])
+            files.extend([to_file_model({"Item": i}) for i in batch_data])
 
         # Generate & add new data nodes
         nodes = data_pipeline_service.get_embedded_nodes(all_files=files)

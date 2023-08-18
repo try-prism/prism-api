@@ -1,10 +1,13 @@
 from http import HTTPStatus
 
+from constants import DYNAMODB_USER_TABLE
 from exceptions import PrismDBException, PrismException, PrismExceptionCode
 from fastapi import APIRouter, Header
 from loguru import logger
+from models import to_user_model
 from models.RequestModels import (
     CancelInviteUserOrganizationRequest,
+    GetUsersRequest,
     RegisterUserRequest,
 )
 from models.ResponseModels import (
@@ -12,6 +15,7 @@ from models.ResponseModels import (
     ErrorDTO,
     GetInvitationResponse,
     GetUserResponse,
+    GetUsersResponse,
     RegisterUserResponse,
 )
 from services import CognitoService
@@ -30,6 +34,7 @@ router = APIRouter()
 | `/user/{id}`              | Update a user's details (*)          | PATCH  |
 | `/user/{id}`              | Delete a user's account              | DELETE |
 | `/user/{id}/invitation`   | Get invitation data from whitelist   | GET    |
+| `/users`                  | Get user data in batch               | GET    |
 """
 
 
@@ -197,3 +202,43 @@ async def get_invitation_data(id: str):
     return GetInvitationResponse(
         status=HTTPStatus.OK.value, whitelist_user=whitelist_user
     )
+
+
+@router.post(
+    "/users",
+    summary="Get user data in batch",
+    tags=["User"],
+    response_model=GetUsersResponse,
+    responses={
+        200: {"model": GetUsersResponse, "description": "OK"},
+        400: {"model": ErrorDTO, "message": "Error: Bad request"},
+    },
+)
+async def get_users(
+    register_request: GetUsersRequest,
+):
+    if not register_request.user_ids:
+        raise PrismException(
+            code=PrismExceptionCode.BAD_REQUEST,
+            message="User ids are required",
+        )
+
+    logger.info("register_request={}", register_request)
+
+    dynamodb_service = DynamoDBService()
+
+    try:
+        user_data = dynamodb_service.batch_get_item(
+            table_name=DYNAMODB_USER_TABLE,
+            field_name="id",
+            field_type="S",
+            field_values=register_request.user_ids,
+        )
+        users = [to_user_model({"Item": i}) for i in user_data]
+    except PrismDBException as e:
+        logger.error("register_request={}, error={}", register_request, e)
+        raise
+
+    logger.info("register_request={}, users={}", register_request, users)
+
+    return GetUsersResponse(status=HTTPStatus.OK.value, users=users)

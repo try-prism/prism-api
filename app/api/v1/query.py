@@ -64,9 +64,12 @@ async def query(websocket: WebSocket, org_id: str = Header(), user_id: str = Hea
                 )
 
                 batch_data = dynamodb_service.batch_get_item(
-                    DYNAMODB_FILE_TABLE, "id", list(source_node_ids)
+                    table_name=DYNAMODB_FILE_TABLE,
+                    field_name="id",
+                    field_type="S",
+                    field_values=list(source_node_ids),
                 )
-                files = [to_file_model(i) for i in batch_data]
+                files = [to_file_model({"Item": i}) for i in batch_data]
                 file_mapping = [{"name": i.name, "url": i.file_url} for i in files]
 
                 await manager.send_message(

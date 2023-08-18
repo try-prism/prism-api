@@ -62,6 +62,11 @@ class GetUserResponse(BaseModel):
     user: UserModel
 
 
+class GetUsersResponse(BaseModel):
+    status: int
+    users: list[UserModel]
+
+
 class DeleteUserResponse(BaseModel):
     status: int
 
