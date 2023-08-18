@@ -67,7 +67,7 @@ async def integration(
             integration_request.public_token
         )
         # Add account_token to organization's link_id_map
-        dynamodb_service.add_integration(
+        integration_item = dynamodb_service.add_integration(
             org_id=integration_request.organization_id,
             org_admin_id=integration_request.organization_admin_id,
             account_token=account_token,
@@ -85,7 +85,9 @@ async def integration(
         initiate_file_processing, integration_request, account_token
     )
 
-    return IntegrationResponse(status=HTTPStatus.OK.value)
+    return IntegrationResponse(
+        status=HTTPStatus.OK.value, integration_item=integration_item
+    )
 
 
 @router.get(

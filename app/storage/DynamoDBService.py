@@ -397,7 +397,7 @@ class DynamoDBService:
 
     def add_integration(
         self, org_id: str, org_admin_id: str, account_token: str
-    ) -> None:
+    ) -> dict:
         logger.info("org_id={}, account_token={}", org_id, account_token)
 
         merge_service = MergeService(account_token=account_token)
@@ -422,6 +422,8 @@ class DynamoDBService:
         link_id_map[account_token] = integration_item
 
         self.put_item(DYNAMODB_ORGANIZATION_TABLE, serialize(organization.dict()))
+
+        return integration_item
 
     def remove_integration(self, org_id: str, account_token: str) -> None:
         logger.info("org_id={}, account_token={}", org_id, account_token)
