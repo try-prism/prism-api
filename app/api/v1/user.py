@@ -223,7 +223,7 @@ async def get_users(
             message="User ids are required",
         )
 
-    logger.info("register_request={}", register_request)
+    logger.info("len(user_ids)={}", len(register_request.user_ids))
 
     dynamodb_service = DynamoDBService()
 
@@ -238,7 +238,5 @@ async def get_users(
     except PrismDBException as e:
         logger.error("register_request={}, error={}", register_request, e)
         raise
-
-    logger.info("register_request={}, users={}", register_request, users)
 
     return GetUsersResponse(status=HTTPStatus.OK.value, users=users)
