@@ -157,6 +157,12 @@ async def delete_user(id: str, org_admin_id: str = Header()):
             message="User id is required",
         )
 
+    if id == org_admin_id:
+        raise PrismException(
+            code=PrismExceptionCode.BAD_REQUEST,
+            message="You cannot delete yourself",
+        )
+
     logger.info("id={}, org_admin_id={}", id, org_admin_id)
 
     dynamodb_service = DynamoDBService()
