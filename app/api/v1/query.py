@@ -2,8 +2,13 @@ import json
 
 from connection import ConnectionManager
 from constants import DYNAMODB_FILE_TABLE
-from exceptions import PrismDBException, PrismDBExceptionCode
-from fastapi import APIRouter, Header, WebSocket, WebSocketDisconnect
+from exceptions import (
+    PrismDBException,
+    PrismDBExceptionCode,
+    PrismException,
+    PrismExceptionCode,
+)
+from fastapi import APIRouter, Cookie, WebSocket, WebSocketDisconnect
 from llama_index.schema import NodeRelationship
 from loguru import logger
 from models import to_file_model
@@ -21,7 +26,17 @@ router = APIRouter()
 
 
 @router.websocket("/query")
-async def query(websocket: WebSocket, org_id: str = Header(), user_id: str = Header()):
+async def query(
+    websocket: WebSocket,
+    org_id: str | None = Cookie(None),
+    user_id: str | None = Cookie(None),
+):
+    if not org_id or not user_id:
+        raise PrismException(
+            code=PrismExceptionCode.BAD_REQUEST,
+            message="Invalid Credentials",
+        )
+
     logger.info("org_id: %s, user_id: %s, Session Started", org_id, user_id)
 
     dynamodb_service = DynamoDBService()
