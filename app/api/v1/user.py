@@ -3,6 +3,7 @@ from http import HTTPStatus
 from constants import DYNAMODB_USER_TABLE
 from exceptions import PrismDBException, PrismException, PrismExceptionCode
 from fastapi import APIRouter, Header
+from fastapi.responses import JSONResponse
 from loguru import logger
 from models import to_user_model
 from models.RequestModels import (
@@ -33,6 +34,7 @@ router = APIRouter()
 | `/user/{id}`              | Retrieve a user's details            | GET    |
 | `/user/{id}`              | Update a user's details (*)          | PATCH  |
 | `/user/{id}`              | Delete a user's account              | DELETE |
+| `/user/{id}/cookie`       | Set cookie for auth                  | POST   |
 | `/user/{id}/invitation`   | Get invitation data from whitelist   | GET    |
 | `/users`                  | Get user data in batch               | GET    |
 """
@@ -168,6 +170,38 @@ async def delete_user(id: str, org_admin_id: str = Header()):
         raise
 
     return DeleteUserResponse(status=HTTPStatus.OK.value)
+
+
+@router.post(
+    "/user/{id}/cookie",
+    summary="Set cookie for auth",
+    tags=["User"],
+)
+async def set_cookie(id: str):
+    if not id:
+        raise PrismException(
+            code=PrismExceptionCode.BAD_REQUEST,
+            message="User id is required",
+        )
+
+    logger.info("id={}", id)
+
+    dynamodb_service = DynamoDBService()
+
+    try:
+        user = dynamodb_service.get_user(user_id=id)
+        org_id = user.organization_id
+    except PrismDBException as e:
+        logger.error("id={}, error={}", id, e)
+        raise
+
+    logger.info("id={}, user={}", id, user)
+
+    response = JSONResponse(content={"status": 200})
+    response.set_cookie(key="org_id", value=org_id)
+    response.set_cookie(key="user_id", value=user.id)
+
+    return response
 
 
 @router.get(
