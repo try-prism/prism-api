@@ -35,6 +35,10 @@ class CancelInviteUserOrganizationRequest(BaseModel):
     organization_user_id: str
 
 
+class GetUsersRequest(BaseModel):
+    user_ids: list[str]
+
+
 class RegisterUserRequest(BaseModel):
     id: str
     email: str

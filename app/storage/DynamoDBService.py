@@ -106,9 +106,13 @@ class DynamoDBService:
         return response
 
     def batch_get_item(
-        self, table_name: str, field_name: str, field_values: list[str]
+        self, table_name: str, field_name: str, field_type: str, field_values: list[str]
     ) -> dict:
-        key = {table_name: {"Keys": [{field_name: item} for item in field_values]}}
+        key = {
+            table_name: {
+                "Keys": [{field_name: {field_type: item}} for item in field_values]
+            }
+        }
         response = self.client.batch_get_item(RequestItems=key)
 
         if "Responses" not in response:
@@ -117,12 +121,9 @@ class DynamoDBService:
                 message="Failed to get items from table",
             )
 
-        retrieved = {}
+        data = response["Responses"][table_name]
 
-        for key in response["Responses"]:
-            retrieved[key] += response["Responses"][key]
-
-        return retrieved
+        return data
 
     def batch_write(self, table_name: str, items: list[dict]) -> None:
         logger.info(
