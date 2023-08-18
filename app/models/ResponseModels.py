@@ -17,6 +17,7 @@ class GenerateLinkTokenResponse(BaseModel):
 
 class IntegrationResponse(BaseModel):
     status: int
+    integration_item: dict
 
 
 class IntegrationDetailResponse(BaseModel):
