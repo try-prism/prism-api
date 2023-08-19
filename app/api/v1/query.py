@@ -67,10 +67,16 @@ async def query(
     try:
         while True:
             user_text = await websocket.receive_text()
-            response = await chat_engine.achat(message=user_text)
-
             payload = {}
-            payload["response"] = response.response
+
+            try:
+                response = await chat_engine.achat(message=user_text)
+                payload["response"] = response.response
+            except Exception as e:
+                logger.error(
+                    "user_text=%s, response=%s, error=%s", user_text, response, e
+                )
+                payload["response"] = "Please try again later"
 
             try:
                 source_node_ids = set(
@@ -92,9 +98,6 @@ async def query(
             except Exception as e:
                 logger.error(
                     "user_text=%s, response=%s, error=%s", user_text, response, e
-                )
-                await manager.send_message(
-                    json.dumps({"response": "Please try again later"}), websocket
                 )
 
             await manager.send_message(json.dumps(payload), websocket)
