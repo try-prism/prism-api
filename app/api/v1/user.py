@@ -91,6 +91,10 @@ async def register_user(
             name=register_request.first_name + " " + register_request.last_name,
             organization_id=whitelist_user.org_id,
         )
+
+        # Get org admin id to use for cancel pending user invite
+        organization = dynamodb_service.get_organization(org_id=whitelist_user.org_id)
+        organization_admin_id = organization.admin_id
     except PrismException as e:
         logger.error(
             "register_request={}, error={}",
@@ -104,6 +108,7 @@ async def register_user(
         cancel_request=CancelInviteUserOrganizationRequest(
             organization_name=whitelist_user.org_name,
             organization_user_id=whitelist_user.id,
+            organization_admin_id=organization_admin_id,
         ),
     )
 
