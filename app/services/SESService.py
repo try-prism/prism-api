@@ -1,5 +1,5 @@
 import boto3
-from constants import DEFAULT_SIGNUP_URL, SES_SENDER_EMAIL
+from constants import REGISTER_URL, SES_SENDER_EMAIL
 from exceptions import PrismEmailException, PrismEmailExceptionCode
 from loguru import logger
 
@@ -40,14 +40,14 @@ class SESService:
                             "Charset": "UTF-8",
                             "Data": (
                                 f"You have been invited to join the {org_name} workspace."
-                                f"Click here to sign up.\n{DEFAULT_SIGNUP_URL + org_user_id}"
+                                f"Click here to sign up.\n{REGISTER_URL + org_user_id}"
                             ),
                         },
                         "Html": {
                             "Charset": "UTF-8",
                             "Data": (
                                 f"<p>You have been invited to join the {org_name} workspace.</p>"
-                                f'<p><a href="{DEFAULT_SIGNUP_URL + org_user_id}" target="_blank">'
+                                f'<p><a href="{REGISTER_URL + org_user_id}" target="_blank">'
                                 f"Click here to sign up</a></p>"
                             ),
                         },

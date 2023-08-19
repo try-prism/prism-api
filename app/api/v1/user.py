@@ -78,7 +78,7 @@ async def register_user(
         )
         # Add user to the cognito user pool
         cognito_service.create_user(
-            user_id=register_request.email,
+            user_id=register_request.id,
             user_email=register_request.email,
             first_name=register_request.first_name,
             last_name=register_request.last_name,
@@ -86,7 +86,7 @@ async def register_user(
         )
         # Add user to user table
         dynamodb_service.register_user(
-            id=register_request.email,
+            id=register_request.id,
             email=register_request.email,
             name=register_request.first_name + " " + register_request.last_name,
             organization_id=whitelist_user.org_id,

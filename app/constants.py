@@ -40,7 +40,7 @@ DYNAMODB_FILE_TABLE_INDEX = os.environ["DYNAMODB_FILE_TABLE_INDEX"]
 
 # SES Configurations
 SES_SENDER_EMAIL = "noreply@tryprism.ai"
-DEFAULT_SIGNUP_URL = "http://tryprism.ai/signup?user="
+REGISTER_URL = "http://tryprism.ai/register?id="
 
 
 # Cognito Configurations
