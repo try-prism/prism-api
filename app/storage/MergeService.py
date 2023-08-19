@@ -268,7 +268,7 @@ class MergeService:
             )
 
         try:
-            response = self.client.filestorage.files.download_retrieve(id=file.id)
+            chunks = self.client.filestorage.files.download_retrieve(id=file.id)
         except Exception as e:
             logger.error(
                 "account_token={}, file_id={}, error={}",
@@ -282,12 +282,13 @@ class MergeService:
             )
 
         if in_bytes:
+            response = b"".join(chunks)
             return io.BytesIO(response)
 
         tmp_uuid = str(uuid.uuid4())
 
         with open(tmp_uuid, "wb") as f:
-            for chunk in response:
+            for chunk in chunks:
                 f.write(chunk)
 
         return tmp_uuid
