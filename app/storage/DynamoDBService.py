@@ -435,6 +435,7 @@ class DynamoDBService:
         integration_item["account_id"] = merge_service.get_account_owner()
 
         link_id_map[account_token] = integration_item
+        organization.updated_at = timestamp
 
         self.put_item(DYNAMODB_ORGANIZATION_TABLE, serialize(organization.dict()))
 
@@ -447,6 +448,7 @@ class DynamoDBService:
 
         link_id_map = organization.link_id_map
         del link_id_map[account_token]
+        organization.updated_at = str(time.time())
 
         self.put_item(DYNAMODB_ORGANIZATION_TABLE, serialize(organization.dict()))
 
@@ -458,8 +460,8 @@ class DynamoDBService:
         )
 
         organization = self.get_organization(org_id)
-        link_id_map = organization.link_id_map
-        link_id_map[account_token]["status"] = status.value
+        organization.link_id_map[account_token]["status"] = status.value
+        organization.updated_at = str(time.time())
 
         self.put_item(DYNAMODB_ORGANIZATION_TABLE, serialize(organization.dict()))
 
@@ -483,6 +485,7 @@ class DynamoDBService:
             temp_file_set.update(file_ids)
 
         organization.document_list = list(temp_file_set)
+        organization.updated_at = str(time.time())
 
         self.put_item(DYNAMODB_ORGANIZATION_TABLE, serialize(organization.dict()))
 
