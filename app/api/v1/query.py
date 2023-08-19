@@ -68,7 +68,9 @@ async def query(
         while True:
             user_text = await websocket.receive_text()
             response = await chat_engine.achat(message=user_text)
-            await manager.send_message(response.response, websocket)
+
+            payload = {}
+            payload["response"] = response.response
 
             try:
                 source_node_ids = set(
@@ -86,15 +88,16 @@ async def query(
                 )
                 files = [to_file_model({"Item": i}) for i in batch_data]
                 file_mapping = [{"name": i.name, "url": i.file_url} for i in files]
-
-                await manager.send_message(
-                    f"**SOURCE**{json.dumps(file_mapping)}", websocket
-                )
+                payload["sources"] = file_mapping
             except Exception as e:
                 logger.error(
                     "user_text=%s, response=%s, error=%s", user_text, response, e
                 )
-                await manager.send_message("**FAIL**", websocket)
+                await manager.send_message(
+                    json.dumps({"response": "Please try again later"}), websocket
+                )
+
+            await manager.send_message(json.dumps(payload), websocket)
     except WebSocketDisconnect:
         manager.disconnect(websocket)
 
