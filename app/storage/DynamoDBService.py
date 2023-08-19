@@ -272,6 +272,7 @@ class DynamoDBService:
             "org_id={}, org_user_id={}, org_admin_id={}, is_remove={}",
             org_id,
             org_user_id,
+            org_admin_id,
             is_remove,
         )
 
@@ -282,6 +283,7 @@ class DynamoDBService:
                 "org_id={}, org_user_id={}, org_admin_id={}, is_remove={}, error={}",
                 org_id,
                 org_user_id,
+                org_admin_id,
                 is_remove,
                 "You don't have permission",
             )
@@ -398,7 +400,12 @@ class DynamoDBService:
     def add_integration(
         self, org_id: str, org_admin_id: str, account_token: str
     ) -> dict:
-        logger.info("org_id={}, account_token={}", org_id, account_token)
+        logger.info(
+            "org_id={}, org_admin_id={}, account_token={}",
+            org_id,
+            org_admin_id,
+            account_token,
+        )
 
         merge_service = MergeService(account_token=account_token)
 
@@ -540,15 +547,23 @@ class DynamoDBService:
         cleaned_ids = [i["id"] for i in ids]
         return cleaned_ids
 
-    def change_org_admin(self, org_id: str, new_admin_id: str) -> None:
-        logger.info("org_id={}, new_admin_id={}", org_id, new_admin_id)
+    def change_org_admin(
+        self, org_id: str, original_admin_id: str, new_admin_id: str
+    ) -> None:
+        logger.info(
+            "org_id={}, original_admin_id={}, new_admin_id={}",
+            org_id,
+            original_admin_id,
+            new_admin_id,
+        )
 
         organization = self.get_organization(org_id)
 
-        if organization.admin_id != new_admin_id:
+        if organization.admin_id != original_admin_id:
             logger.error(
-                "org_id={}, new_admin_id={} error={}",
+                "org_id={}, original_admin_id={}, new_admin_id={} error={}",
                 org_id,
+                original_admin_id,
                 new_admin_id,
                 "You don't have permission to edit this organization",
             )

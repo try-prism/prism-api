@@ -17,7 +17,7 @@ class IntegrationRemoveRequest(BaseModel):
 class RegisterOrganizationRequest(BaseModel):
     organization_name: str
     organization_email: str
-    organization_admin_id: str
+    organization_admin_email: str
 
 
 class RemoveOrganizationRequest(BaseModel):

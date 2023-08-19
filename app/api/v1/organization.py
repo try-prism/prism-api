@@ -55,7 +55,7 @@ async def register_organization(
     if (
         not register_request.organization_name
         or not register_request.organization_email
-        or not register_request.organization_admin_id
+        or not register_request.organization_admin_email
     ):
         raise PrismException(
             code=PrismExceptionCode.BAD_REQUEST,
@@ -72,18 +72,23 @@ async def register_organization(
             org_id=org_id,
             org_name=register_request.organization_name,
             org_email=register_request.organization_email,
-            org_admin_id=register_request.organization_admin_id,
+            org_admin_id=register_request.organization_admin_email,
         )
 
-        await invite_user_to_organization(
+        response = await invite_user_to_organization(
             org_id=org_id,
             invite_request=InviteUserOrganizationRequest(
                 organization_name=register_request.organization_name,
                 organization_user_email=register_request.organization_email,
-                organization_admin_id=register_request.organization_admin_id,
+                organization_admin_id=register_request.organization_admin_email,
             ),
         )
 
+        dynamodb_service.change_org_admin(
+            org_id=org_id,
+            original_admin_id=register_request.organization_admin_email,
+            new_admin_id=response.org_user_id,
+        )
     except PrismDBException as e:
         logger.error("register_request={}, error={}", register_request, e)
         raise
@@ -203,7 +208,7 @@ async def update_organization(org_id: str, update_request: UpdateOrganizationReq
     if (
         not org_id
         or not update_request.new_organization_admin_id
-        or update_request.prev_organization_admin_id
+        or not update_request.prev_organization_admin_id
     ):
         logger.error(
             "org_id={}, update_request={}, error=Invalid organization update request",
@@ -221,7 +226,9 @@ async def update_organization(org_id: str, update_request: UpdateOrganizationReq
 
     try:
         dynamodb_service.change_org_admin(
-            org_id=org_id, new_admin_id=update_request.new_organization_admin_id
+            org_id=org_id,
+            original_admin_id=update_request.prev_organization_admin_id,
+            new_admin_id=update_request.new_organization_admin_id,
         )
     except PrismDBException as e:
         logger.error(
@@ -286,7 +293,9 @@ async def invite_user_to_organization(
         )
         raise
 
-    return InviteUserOrganizationResponse(status=HTTPStatus.OK.value)
+    return InviteUserOrganizationResponse(
+        status=HTTPStatus.OK.value, org_user_id=org_user_id
+    )
 
 
 @router.delete(

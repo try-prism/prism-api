@@ -48,6 +48,7 @@ class UpdateOrganizationResponse(BaseModel):
 
 class InviteUserOrganizationResponse(BaseModel):
     status: int
+    org_user_id: str
 
 
 class CancelInviteUserOrganizationResponse(BaseModel):
