@@ -176,14 +176,20 @@ class DynamoDBService:
         )
 
     def register_organization(
-        self, org_id: str, org_name: str, org_email: str, org_admin_id: str
+        self,
+        org_id: str,
+        org_name: str,
+        org_email: str,
+        org_admin_id: str,
+        org_admin_email: str,
     ) -> None:
         logger.info(
-            "org_id={}, org_name={}, org_email={}, org_admin_id={}",
+            "org_id={}, org_name={}, org_email={}, org_admin_id={}, org_admin_email={}",
             org_id,
             org_name,
             org_email,
             org_admin_id,
+            org_admin_email,
         )
 
         timestamp = str(time.time())
@@ -192,6 +198,7 @@ class DynamoDBService:
             "name": {"S": org_name},
             "email": {"S": org_email},
             "admin_id": {"S": org_admin_id},
+            "admin_email": {"S": org_admin_email},
             "user_list": {"L": []},
             "invited_user_list": {"L": []},
             "link_id_map": {"M": {}},
@@ -549,23 +556,29 @@ class DynamoDBService:
         return cleaned_ids
 
     def change_org_admin(
-        self, org_id: str, original_admin_id: str, new_admin_id: str
+        self,
+        org_id: str,
+        original_admin_id: str,
+        new_admin_id: str,
+        new_admin_email: str,
     ) -> None:
         logger.info(
-            "org_id={}, original_admin_id={}, new_admin_id={}",
+            "org_id={}, original_admin_id={}, new_admin_id={}, new_admin_email={}",
             org_id,
             original_admin_id,
             new_admin_id,
+            new_admin_email,
         )
 
         organization = self.get_organization(org_id)
 
         if organization.admin_id != original_admin_id:
             logger.error(
-                "org_id={}, original_admin_id={}, new_admin_id={} error={}",
+                "org_id={}, original_admin_id={}, new_admin_id={}, new_admin_email={}, error={}",
                 org_id,
                 original_admin_id,
                 new_admin_id,
+                new_admin_email,
                 "You don't have permission to edit this organization",
             )
             raise PrismDBException(
@@ -574,5 +587,6 @@ class DynamoDBService:
             )
 
         organization.admin_id = new_admin_id
+        organization.admin_email = new_admin_email
 
         self.put_item(DYNAMODB_ORGANIZATION_TABLE, serialize(organization.dict()))

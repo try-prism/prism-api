@@ -27,7 +27,8 @@ class RemoveOrganizationRequest(BaseModel):
 
 class UpdateOrganizationRequest(BaseModel):
     new_organization_admin_id: str
-    prev_organization_admin_id: str
+    new_organization_admin_email: str
+    original_organization_admin_id: str
 
 
 class InviteUserOrganizationRequest(BaseModel):

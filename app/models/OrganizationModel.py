@@ -7,6 +7,7 @@ class OrganizationModel(BaseModel):
     name: str
     email: str
     admin_id: str
+    admin_email: str
     user_list: list[str]
     invited_user_list: list[str]
     link_id_map: dict
@@ -23,6 +24,7 @@ def to_organization_model(response: dict) -> OrganizationModel:
         name=item.get("name", ""),
         email=item.get("email", ""),
         admin_id=item.get("admin_id", ""),
+        admin_email=item.get("admin_email", ""),
         user_list=item.get("user_list", []),
         invited_user_list=item.get("invited_user_list", []),
         link_id_map=item.get("link_id_map", {}),
