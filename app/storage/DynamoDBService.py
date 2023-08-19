@@ -424,6 +424,7 @@ class DynamoDBService:
         integration_item = integration_provider.dict()
         integration_item["created"] = timestamp
         integration_item["status"] = IntegrationStatus.SYNCING.value
+        integration_item["account_token"] = account_token
         integration_item["account_id"] = merge_service.get_account_owner()
 
         link_id_map[account_token] = integration_item
