@@ -284,6 +284,7 @@ async def invite_user_to_organization(
             org_id=org_id,
             org_name=invite_request.organization_name,
             org_user_id=org_user_id,
+            org_user_email=invite_request.organization_user_email,
             is_remove=False,
         )
         ses_serivce.send_signup_email(
@@ -339,10 +340,7 @@ async def cancel_pending_user_invite(
             is_remove=True,
         )
         dynamodb_service.modify_whitelist(
-            org_id=org_id,
-            org_name=cancel_request.organization_name,
-            org_user_id=cancel_request.organization_user_id,
-            is_remove=True,
+            org_user_id=cancel_request.organization_user_id, is_remove=True
         )
     except PrismDBException as e:
         logger.error(
