@@ -241,15 +241,39 @@ class DynamoDBService:
         return self.delete_item(DYNAMODB_ORGANIZATION_TABLE, key)
 
     def modify_whitelist(
-        self, org_id: str, org_name: str, org_user_id: str, is_remove: bool
+        self,
+        is_remove: bool,
+        org_id: str | None = None,
+        org_name: str | None = None,
+        org_user_id: str | None = None,
+        org_user_email: str | None = None,
     ) -> None:
         logger.info(
-            "org_id={}, org_name={}, org_user_id={}, is_remove={}",
+            "org_id={}, org_name={}, org_user_id={}, org_user_email={}, is_remove={}",
             org_id,
             org_name,
             org_user_id,
+            org_user_email,
             is_remove,
         )
+
+        if (is_remove and not org_user_id) or (
+            not is_remove
+            and (not org_id or not org_name or not org_user_id or not org_user_email)
+        ):
+            logger.error(
+                "org_id={}, org_name={}, org_user_id={}, org_user_email={}, is_remove={}, error={}",
+                org_id,
+                org_name,
+                org_user_id,
+                org_user_email,
+                is_remove,
+                "Missing parameter to perform operations on whitelist",
+            )
+            raise PrismDBException(
+                code=PrismDBExceptionCode.INVALID_ARGUMENT,
+                message="Missing parameter to perform operations on whitelist",
+            )
 
         try:
             if is_remove:
@@ -263,6 +287,7 @@ class DynamoDBService:
                     "id": {"S": org_user_id},
                     "org_name": {"S": org_name},
                     "org_id": {"S": org_id},
+                    "org_user_email": {"S": org_user_email},
                     "created_at": {"S": timestamp},
                 }
 
@@ -497,10 +522,16 @@ class DynamoDBService:
         file_ids: list[str] | None = None,
         files: list[File] | None = None,
     ) -> None:
-        if not is_remove and not account_token:
+        if not is_remove and (not account_token or files is None):
             raise PrismDBException(
                 code=PrismDBExceptionCode.INVALID_ARGUMENT,
                 message="account_token is required when adding files",
+            )
+
+        if is_remove and file_ids is None:
+            raise PrismDBException(
+                code=PrismDBExceptionCode.INVALID_ARGUMENT,
+                message="file_ids is required when removing files",
             )
 
         logger.info(
