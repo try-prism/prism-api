@@ -135,8 +135,8 @@ async def remove_organization(
 
         # Remove users
         for id in organization.user_list:
-            dynamodb_service.remove_user(user_id=id, org_admin_id=organization.admin_id)
             cognito_service.remove_user(user_id=id)
+            dynamodb_service.remove_user(user_id=id, org_admin_id=organization.admin_id)
 
         # Drop collection from the vector store
         data_index_service.drop_collection()

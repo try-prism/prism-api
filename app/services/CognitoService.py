@@ -8,6 +8,7 @@ from exceptions import (
     PrismIdentityExceptionCode,
 )
 from loguru import logger
+from storage import DynamoDBService
 
 from .SESService import SESService
 
@@ -45,6 +46,7 @@ class CognitoService:
                     {"Name": "given_name", "Value": first_name},
                     {"Name": "family_name", "Value": last_name},
                     {"Name": "custom:organization_id", "Value": organization_id},
+                    {"Name": "custom:user_id", "Value": user_id},
                 ],
                 TemporaryPassword=random_password,
                 MessageAction="SUPPRESS",
@@ -83,9 +85,12 @@ class CognitoService:
     def remove_user(self, user_id: str) -> None:
         logger.info("user_id={}", user_id)
 
+        dynamodb_service = DynamoDBService()
+
         try:
+            user = dynamodb_service.get_user(user_id=user_id)
             self.client.admin_delete_user(
-                UserPoolId=COGNITO_USER_POOL_ID, Username=user_id
+                UserPoolId=COGNITO_USER_POOL_ID, Username=user.email
             )
         except Exception as e:
             logger.error("user_id={}, error={}", user_id, str(e))
