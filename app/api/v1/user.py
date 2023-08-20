@@ -12,6 +12,7 @@ from models.RequestModels import (
     RegisterUserRequest,
 )
 from models.ResponseModels import (
+    CheckAdminResponse,
     DeleteUserResponse,
     ErrorDTO,
     GetInvitationResponse,
@@ -34,6 +35,7 @@ router = APIRouter()
 | `/user/{id}`              | Retrieve a user's details            | GET    |
 | `/user/{id}`              | Update a user's details (*)          | PATCH  |
 | `/user/{id}`              | Delete a user's account              | DELETE |
+| `/user/{id}/admin `       | Check if a user is an admin          | GET    |
 | `/user/{id}/cookie`       | Set cookie for auth                  | POST   |
 | `/user/{id}/invitation`   | Get invitation data from whitelist   | GET    |
 | `/users`                  | Get user data in batch               | GET    |
@@ -181,6 +183,38 @@ async def delete_user(id: str, org_admin_id: str = Header()):
         raise
 
     return DeleteUserResponse(status=HTTPStatus.OK.value)
+
+
+@router.get(
+    "/user/{id}/admin",
+    summary="Check if a user is an admin",
+    tags=["User"],
+    response_model=CheckAdminResponse,
+    responses={
+        200: {"model": CheckAdminResponse, "description": "OK"},
+        400: {"model": ErrorDTO, "message": "Error: Bad request"},
+    },
+)
+async def is_admin(id: str, organization_id: str = Header()):
+    if not id or not organization_id:
+        raise PrismException(
+            code=PrismExceptionCode.BAD_REQUEST,
+            message="User ID and organization ID is required",
+        )
+
+    logger.info("id={}, organization_id={}", id, organization_id)
+
+    dynamodb_service = DynamoDBService()
+
+    try:
+        organization = dynamodb_service.get_organization(org_id=organization_id)
+    except PrismDBException as e:
+        logger.error("id={}, organization_id={}, error={}", id, organization_id, e)
+        raise
+
+    return CheckAdminResponse(
+        status=HTTPStatus.OK.value, is_admin=organization.admin_id != id
+    )
 
 
 @router.post(

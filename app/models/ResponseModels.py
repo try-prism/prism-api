@@ -80,3 +80,8 @@ class GetInvitationResponse(BaseModel):
 
 class SyncOrganizationDataResponse(BaseModel):
     status: int
+
+
+class CheckAdminResponse(BaseModel):
+    status: int
+    is_admin: bool
