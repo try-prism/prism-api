@@ -174,8 +174,8 @@ async def delete_user(id: str, org_admin_id: str = Header()):
     cognito_service = CognitoService()
 
     try:
-        dynamodb_service.remove_user(user_id=id, org_admin_id=org_admin_id)
         cognito_service.remove_user(user_id=id)
+        dynamodb_service.remove_user(user_id=id, org_admin_id=org_admin_id)
     except PrismException as e:
         logger.error("id={}, org_admin_id={}, error={}", id, org_admin_id, e)
         raise

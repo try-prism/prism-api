@@ -381,7 +381,7 @@ class DynamoDBService:
             raise
 
     def remove_user(self, user_id: str, org_admin_id: str) -> dict:
-        logger("user_id={}, org_admin_id={}", user_id, org_admin_id)
+        logger.info("user_id={}, org_admin_id={}", user_id, org_admin_id)
 
         user = self.get_user(user_id)
         organization = self.get_organization(org_id=user.organization_id)
@@ -392,7 +392,6 @@ class DynamoDBService:
                 message="You don't have permission to remove user",
             )
 
-        self.delete_item(DYNAMODB_USER_TABLE, get_user_key(user_id))
         user_list = organization.user_list
 
         if user_id in user_list:
@@ -403,6 +402,8 @@ class DynamoDBService:
                 code=PrismDBExceptionCode.USER_DOES_NOT_EXIST,
                 message="User does not exist",
             )
+
+        return self.delete_item(DYNAMODB_USER_TABLE, get_user_key(user_id))
 
     def add_integration(
         self, org_id: str, org_admin_id: str, account_token: str
