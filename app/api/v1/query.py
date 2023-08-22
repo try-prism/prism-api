@@ -8,7 +8,7 @@ from exceptions import (
     PrismException,
     PrismExceptionCode,
 )
-from fastapi import APIRouter, Cookie, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from llama_index.schema import NodeRelationship
 from loguru import logger
 from models import to_file_model
@@ -28,8 +28,8 @@ router = APIRouter()
 @router.websocket("/query")
 async def query(
     websocket: WebSocket,
-    org_id: str | None = Cookie(None),
-    user_id: str | None = Cookie(None),
+    org_id: str = "",
+    user_id: str = "",
 ):
     if not org_id or not user_id:
         raise PrismException(
