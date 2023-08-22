@@ -141,7 +141,7 @@ class DataIndexingService:
             llm=OpenAI(
                 model=DEFAULT_OPENAI_MODEL,
                 user=self.org_id,
-                temperature=0,
+                temperature=0.1,
                 max_retries=3,
             ),
             chunk_size=1024,
