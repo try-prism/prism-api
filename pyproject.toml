@@ -7,16 +7,16 @@ readme = "README.md"
 packages = []
 
 [tool.poetry.dependencies]
-boto3 = "^1.28.25"
+boto3 = "^1.28.31"
 cohere = "^4.19.3"
 fastapi = "^0.101.1"
 langchain = "^0.0.262"
-llama-index = "^0.8.1"
-mergepythonclient = "^0.2.2"
+llama-index = "^0.8.5.post2"
+mergepythonclient = "^0.2.4"
 pymilvus = "^2.2.15"
 python = "^3.10"
 python-dotenv = "^1.0.0"
-ray = {extras = ["default"], version = "^2.6.2"}
+ray = {version = "^2.6.3", extras = ["default"]}
 unstructured = {extras = ["csv", "doc", "docx", "html", "pdf", "ppt", "pptx", "rtf", "txt", "xlsx"], version = "^0.9.2"}
 uvicorn = "^0.23.2"
 websockets = "^11.0.3"
@@ -29,7 +29,7 @@ pyarrow = "^12.0.1"
 black = "^23.7.0"
 pre-commit = "^3.3.3"
 pylint = "^2.17.5"
-ruff = "^0.0.281"
+ruff = "^0.0.285"
 isort = "^5.12.0"
 
 [tool.ruff]
