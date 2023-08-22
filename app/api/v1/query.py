@@ -37,7 +37,7 @@ async def query(
             message="Invalid Credentials",
         )
 
-    logger.info("org_id: %s, user_id: %s, Session Started", org_id, user_id)
+    logger.info("org_id={}, user_id={}, Session Started", org_id, user_id)
 
     dynamodb_service = DynamoDBService()
 
@@ -58,7 +58,7 @@ async def query(
         chat_engine = data_index_service.generate_chat_engine(vector_index)
 
     except PrismDBException as e:
-        logger.error("org_id=%s, user_id: %s, error=%s", org_id, user_id, e)
+        logger.error("org_id={}, user_id: {}, error={}", org_id, user_id, e)
         return
 
     manager = ConnectionManager()
@@ -74,7 +74,7 @@ async def query(
                 payload["response"] = response.response
             except Exception as e:
                 logger.error(
-                    "user_text=%s, response=%s, error=%s", user_text, response, e
+                    "user_text={}, response={}, error={}", user_text, response, e
                 )
                 payload["response"] = "Please try again later"
 
@@ -97,11 +97,11 @@ async def query(
                 payload["sources"] = file_mapping
             except Exception as e:
                 logger.error(
-                    "user_text=%s, response=%s, error=%s", user_text, response, e
+                    "user_text={}, response={}, error={}", user_text, response, e
                 )
 
             await manager.send_message(json.dumps(payload), websocket)
     except WebSocketDisconnect:
         manager.disconnect(websocket)
 
-    logger.info("org_id: %s, user_id: %s, Session Ended", org_id, user_id)
+    logger.info("org_id: {}, user_id: {}, Session Ended", org_id, user_id)
