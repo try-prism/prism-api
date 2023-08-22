@@ -28,15 +28,15 @@ router = APIRouter()
 
 
 """
-| Endpoint                  | Description                          | Method |
-|---------------------------|--------------------------------------|--------|
-| `/user`                   | Register a new user                  | POST   |
-| `/user/{id}`              | Retrieve a user's details            | GET    |
-| `/user/{id}`              | Update a user's details (*)          | PATCH  |
-| `/user/{id}`              | Delete a user's account              | DELETE |
-| `/user/{id}/admin `       | Check if a user is an admin          | GET    |
-| `/user/{id}/invitation`   | Get invitation data from whitelist   | GET    |
-| `/users`                  | Get user data in batch               | GET    |
+| Endpoint                       | Description                          | Method |
+|--------------------------------|--------------------------------------|--------|
+| `/user`                        | Register a new user                  | POST   |
+| `/user/{user_id}`              | Retrieve a user's details            | GET    |
+| `/user/{user_id}`              | Update a user's details (*)          | PATCH  |
+| `/user/{user_id}`              | Delete a user's account              | DELETE |
+| `/user/{user_id}/admin `       | Check if a user is an admin          | GET    |
+| `/user/{user_id}/invitation`   | Get invitation data from whitelist   | GET    |
+| `/users`                       | Get user data in batch               | GET    |
 """
 
 
@@ -116,7 +116,7 @@ async def register_user(
 
 
 @router.get(
-    "/user/{id}",
+    "/user/{user_id}",
     summary="Retrieve a user's details",
     tags=["User"],
     response_model=GetUserResponse,
@@ -125,28 +125,28 @@ async def register_user(
         400: {"model": ErrorDTO, "message": "Error: Bad request"},
     },
 )
-async def get_user(id: str):
-    if not id:
+async def get_user(user_id: str):
+    if not user_id:
         raise PrismException(
             code=PrismExceptionCode.BAD_REQUEST,
             message="User id is required",
         )
 
-    logger.info("id={}", id)
+    logger.info("user_id={}", user_id)
 
     dynamodb_service = DynamoDBService()
 
     try:
-        user = dynamodb_service.get_user(user_id=id)
+        user = dynamodb_service.get_user(user_id=user_id)
     except PrismDBException as e:
-        logger.error("id={}, error={}", id, e)
+        logger.error("user_id={}, error={}", user_id, e)
         raise
 
     return GetUserResponse(status=HTTPStatus.OK.value, user=user)
 
 
 @router.delete(
-    "/user/{id}",
+    "/user/{user_id}",
     summary="Delete a user's account",
     tags=["User"],
     response_model=DeleteUserResponse,
@@ -155,36 +155,36 @@ async def get_user(id: str):
         400: {"model": ErrorDTO, "message": "Error: Bad request"},
     },
 )
-async def delete_user(id: str, org_admin_id: str = Header()):
-    if not id:
+async def delete_user(user_id: str, org_admin_id: str = Header()):
+    if not user_id:
         raise PrismException(
             code=PrismExceptionCode.BAD_REQUEST,
             message="User id is required",
         )
 
-    if id == org_admin_id:
+    if user_id == org_admin_id:
         raise PrismException(
             code=PrismExceptionCode.BAD_REQUEST,
             message="You cannot delete yourself",
         )
 
-    logger.info("id={}, org_admin_id={}", id, org_admin_id)
+    logger.info("user_id={}, org_admin_id={}", user_id, org_admin_id)
 
     dynamodb_service = DynamoDBService()
     cognito_service = CognitoService()
 
     try:
-        cognito_service.remove_user(user_id=id)
-        dynamodb_service.remove_user(user_id=id, org_admin_id=org_admin_id)
+        cognito_service.remove_user(user_id=user_id)
+        dynamodb_service.remove_user(user_id=user_id, org_admin_id=org_admin_id)
     except PrismException as e:
-        logger.error("id={}, org_admin_id={}, error={}", id, org_admin_id, e)
+        logger.error("user_id={}, org_admin_id={}, error={}", user_id, org_admin_id, e)
         raise
 
     return DeleteUserResponse(status=HTTPStatus.OK.value)
 
 
 @router.get(
-    "/user/{id}/admin",
+    "/user/{user_id}/admin",
     summary="Check if a user is an admin",
     tags=["User"],
     response_model=CheckAdminResponse,
@@ -193,30 +193,32 @@ async def delete_user(id: str, org_admin_id: str = Header()):
         400: {"model": ErrorDTO, "message": "Error: Bad request"},
     },
 )
-async def is_admin(id: str, organization_id: str = Header()):
-    if not id or not organization_id:
+async def is_admin(user_id: str, organization_id: str = Header()):
+    if not user_id or not organization_id:
         raise PrismException(
             code=PrismExceptionCode.BAD_REQUEST,
             message="User ID and organization ID is required",
         )
 
-    logger.info("id={}, organization_id={}", id, organization_id)
+    logger.info("user_id={}, organization_id={}", user_id, organization_id)
 
     dynamodb_service = DynamoDBService()
 
     try:
         organization = dynamodb_service.get_organization(org_id=organization_id)
     except PrismDBException as e:
-        logger.error("id={}, organization_id={}, error={}", id, organization_id, e)
+        logger.error(
+            "user_id={}, organization_id={}, error={}", user_id, organization_id, e
+        )
         raise
 
     return CheckAdminResponse(
-        status=HTTPStatus.OK.value, is_admin=organization.admin_id != id
+        status=HTTPStatus.OK.value, is_admin=organization.admin_id != user_id
     )
 
 
 @router.get(
-    "/user/{id}/invitation",
+    "/user/{user_id}/invitation",
     summary="Get invitation data from whitelist",
     tags=["User"],
     response_model=GetInvitationResponse,
@@ -225,24 +227,24 @@ async def is_admin(id: str, organization_id: str = Header()):
         400: {"model": ErrorDTO, "message": "Error: Bad request"},
     },
 )
-async def get_invitation_data(id: str):
-    if not id:
+async def get_invitation_data(user_id: str):
+    if not user_id:
         raise PrismException(
             code=PrismExceptionCode.BAD_REQUEST,
             message="User id is required",
         )
 
-    logger.info("id={}", id)
+    logger.info("user_id={}", user_id)
 
     dynamodb_service = DynamoDBService()
 
     try:
-        whitelist_user = dynamodb_service.get_whitelist_user_data(user_id=id)
+        whitelist_user = dynamodb_service.get_whitelist_user_data(user_id=user_id)
     except PrismDBException as e:
-        logger.error("id={}, error={}", id, e)
+        logger.error("user_id={}, error={}", user_id, e)
         raise
 
-    logger.info("id={}, whitelist_user={}", id, whitelist_user)
+    logger.info("user_id={}, whitelist_user={}", user_id, whitelist_user)
 
     return GetInvitationResponse(
         status=HTTPStatus.OK.value, whitelist_user=whitelist_user
