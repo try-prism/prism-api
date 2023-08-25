@@ -71,6 +71,7 @@ async def query(
 
             try:
                 response = await chat_engine.achat(message=user_text)
+                logger.info("response={}", response)
                 payload["response"] = response.response
             except Exception as e:
                 logger.error("user_text={}, error={}", user_text, e)

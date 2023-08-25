@@ -55,7 +55,7 @@ class DataIndexingService:
         logger.info("org_id={}, len(nodes)={}", self.org_id, len(nodes))
 
         vector_index = VectorStoreIndex(
-            nodes=nodes, storage_context=self.storage_context
+            nodes=nodes, storage_context=self.storage_context, show_progress=True
         )
 
         logger.info(
@@ -160,7 +160,7 @@ class DataIndexingService:
         chat_engine = vector_index.as_chat_engine(
             similarity_top_k=10,
             service_context=service_context,
-            chat_mode=ChatMode.REACT,
+            chat_mode=ChatMode.OPENAI,
             node_postprocessors=[
                 cohere_rerank_postprocessor,
                 fixed_recency_postprocessor,
