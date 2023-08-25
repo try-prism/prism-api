@@ -23,13 +23,10 @@ class DataPipelineService:
         self.org_id = org_id
         self.account_token = account_token
         self.loader = CustomUnstructuredReader()
-        self.parser = SimpleNodeParser()
+        self.parser = SimpleNodeParser.from_defaults()
         self.dynamodb_service = DynamoDBService()
         self.merge_service = MergeService(account_token=account_token)
-        today = datetime.date.today()
-        self.process_date = str(
-            datetime.datetime(today.year, today.month, today.day).timestamp()
-        )
+        self.process_date = datetime.datetime.today().strftime("%m/%d/%Y, %H:%M:%S")
         self.not_processed_file_ids: list[str] = []
 
         if not ray.is_initialized():
