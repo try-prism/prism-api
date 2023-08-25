@@ -73,18 +73,18 @@ async def query(
                 response = await chat_engine.achat(message=user_text)
                 payload["response"] = response.response
             except Exception as e:
-                logger.error(
-                    "user_text={}, response={}, error={}", user_text, response, e
-                )
+                logger.error("user_text={}, error={}", user_text, e)
                 payload["response"] = "Please try again later"
 
             try:
+                logger.info("source_nodes={}", response.source_nodes)
                 source_node_ids = set(
                     [
                         i.node.relationships[NodeRelationship.SOURCE].node_id
                         for i in response.source_nodes
                     ]
                 )
+                logger.info("source_node_ids={}", source_node_ids)
 
                 batch_data = dynamodb_service.batch_get_item(
                     table_name=DYNAMODB_FILE_TABLE,

@@ -11,12 +11,7 @@ from constants import (
     ZILLIZ_CLOUD_USER,
 )
 from exceptions import PrismDBException, PrismDBExceptionCode
-from llama_index import (
-    ServiceContext,
-    StorageContext,
-    VectorStoreIndex,
-    load_index_from_storage,
-)
+from llama_index import ServiceContext, StorageContext, VectorStoreIndex
 from llama_index.callbacks import CallbackManager, TokenCountingHandler
 from llama_index.chat_engine.types import BaseChatEngine, ChatMode
 from llama_index.indices.postprocessor import (
@@ -128,7 +123,7 @@ class DataIndexingService:
     def load_vector_index(self) -> VectorStoreIndex:
         logger.info("org_id={}", self.org_id)
 
-        return load_index_from_storage(storage_context=self.storage_context)
+        return VectorStoreIndex.from_vector_store(self.storage_context.vector_store)
 
     def generate_chat_engine(self, vector_index: VectorStoreIndex) -> BaseChatEngine:
         logger.info("org_id={}, vector_index_id={}", self.org_id, vector_index.index_id)
@@ -149,21 +144,21 @@ class DataIndexingService:
         )
 
         # prioritize most recent information in the results
+        # date_key: the key in the metadata to find the date
         fixed_recency_postprocessor = FixedRecencyPostprocessor(
-            tok_k=5, date_key="process_date"  # the key in the metadata to find the date
+            tok_k=5, date_key="process_date", service_context=service_context
         )
 
         # re-order nodes, and returns the top N nodes
-        cohere_rerank_postprocessor = CohereRerank(
-            api_key=COHERE_API_KEY, top_n=self.top_k
-        )
+        cohere_rerank_postprocessor = CohereRerank(api_key=COHERE_API_KEY, top_n=3)
+
         # remove sentences that are not relevant to the query
         sentence_embedding_postprocessor = SentenceEmbeddingOptimizer(
             percentile_cutoff=0.7
         )
 
         chat_engine = vector_index.as_chat_engine(
-            similarity_top_k=self.top_k,
+            similarity_top_k=10,
             service_context=service_context,
             chat_mode=ChatMode.REACT,
             node_postprocessors=[
