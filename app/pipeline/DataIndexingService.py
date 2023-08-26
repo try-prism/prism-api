@@ -13,12 +13,12 @@ from constants import (
 from exceptions import PrismDBException, PrismDBExceptionCode
 from llama_index import ServiceContext, StorageContext, VectorStoreIndex
 from llama_index.callbacks import CallbackManager, TokenCountingHandler
-from llama_index.chat_engine.types import BaseChatEngine, ChatMode
 from llama_index.indices.postprocessor import (
     FixedRecencyPostprocessor,
     SentenceEmbeddingOptimizer,
 )
 from llama_index.indices.postprocessor.cohere_rerank import CohereRerank
+from llama_index.indices.query.base import BaseQueryEngine
 from llama_index.llms import OpenAI
 from llama_index.schema import BaseNode
 from llama_index.vector_stores import MilvusVectorStore
@@ -55,7 +55,7 @@ class DataIndexingService:
         logger.info("org_id={}, len(nodes)={}", self.org_id, len(nodes))
 
         vector_index = VectorStoreIndex(
-            nodes=nodes, storage_context=self.storage_context
+            nodes=nodes, storage_context=self.storage_context, show_progress=True
         )
 
         logger.info(
@@ -125,7 +125,7 @@ class DataIndexingService:
 
         return VectorStoreIndex.from_vector_store(self.storage_context.vector_store)
 
-    def generate_chat_engine(self, vector_index: VectorStoreIndex) -> BaseChatEngine:
+    def generate_query_engine(self, vector_index: VectorStoreIndex) -> BaseQueryEngine:
         logger.info("org_id={}, vector_index_id={}", self.org_id, vector_index.index_id)
 
         token_counter = TokenCountingHandler(
@@ -157,10 +157,9 @@ class DataIndexingService:
             percentile_cutoff=0.7
         )
 
-        chat_engine = vector_index.as_chat_engine(
+        query_engine = vector_index.as_query_engine(
             similarity_top_k=10,
             service_context=service_context,
-            chat_mode=ChatMode.REACT,
             node_postprocessors=[
                 cohere_rerank_postprocessor,
                 fixed_recency_postprocessor,
@@ -168,4 +167,4 @@ class DataIndexingService:
             ],
         )
 
-        return chat_engine
+        return query_engine

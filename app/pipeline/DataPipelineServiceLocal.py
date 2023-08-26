@@ -50,7 +50,9 @@ class DataPipelineServiceLocal:
             )
 
         documents = [doc["doc"] for doc in loaded_docs]
-        nodes = SimpleNodeParser.from_defaults().get_nodes_from_documents(documents)
+        nodes = SimpleNodeParser.from_defaults().get_nodes_from_documents(
+            documents, show_progress=True
+        )
 
         return nodes
 
@@ -74,7 +76,6 @@ class DataPipelineServiceLocal:
                 "file_id": file_row["data"].id,
                 "process_date": self.process_date,
             }
-
             documents.extend(loaded_doc)
         except PrismException as e:
             logger.error("file_row={}, error={}", file_row, e)

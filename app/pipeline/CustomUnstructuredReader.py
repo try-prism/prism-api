@@ -7,6 +7,7 @@ Original Implementation: llama_hub/file/unstructured/base.py
 A parser for unstructured text files using Unstructured.io.
 Supports .html, .rtf, .txt, .csv, .doc, .docx, .pdf, .ppt, .pptx, and .xlsx documents.
 """
+import re
 from typing import IO, Any
 
 from llama_index.readers.base import BaseReader
@@ -19,6 +20,8 @@ class CustomUnstructuredReader(BaseReader):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         """Init params."""
         super().__init__(*args, **kwargs)
+        self.clean_regex = re.compile(r"[\t\n]")
+        self.compress_regex = re.compile(r" +")
 
         # Prerequisite for Unstructured.io to work
         import nltk
@@ -30,20 +33,13 @@ class CustomUnstructuredReader(BaseReader):
         self,
         file: IO[bytes],
         extra_info: dict | None = None,
-        split_documents: bool | None = False,
     ) -> list[Document]:
         """Parse file."""
         from unstructured.partition.auto import partition
 
         elements = partition(file=file)
         text_chunks = [" ".join(str(el).split()) for el in elements]
+        clean_text = self.clean_regex.sub(" ", "\n".join(text_chunks))
+        clean_text = self.compress_regex.sub(" ", clean_text)
 
-        if split_documents:
-            return [
-                Document(text=chunk, extra_info=extra_info or {})
-                for chunk in text_chunks
-            ]
-        else:
-            return [
-                Document(text="\n\n".join(text_chunks), extra_info=extra_info or {})
-            ]
+        return [Document(text=clean_text, extra_info=extra_info or {})]

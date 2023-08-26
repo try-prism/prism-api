@@ -55,7 +55,7 @@ async def query(
         data_index_service = DataIndexingService(org_id=org_id)
 
         vector_index = data_index_service.load_vector_index()
-        chat_engine = data_index_service.generate_chat_engine(vector_index)
+        query_engine = data_index_service.generate_query_engine(vector_index)
 
     except PrismDBException as e:
         logger.error("org_id={}, user_id: {}, error={}", org_id, user_id, e)
@@ -70,14 +70,13 @@ async def query(
             payload = {}
 
             try:
-                response = await chat_engine.achat(message=user_text)
+                response = await query_engine.aquery(user_text)
                 payload["response"] = response.response
             except Exception as e:
                 logger.error("user_text={}, error={}", user_text, e)
                 payload["response"] = "Please try again later"
 
             try:
-                logger.info("source_nodes={}", response.source_nodes)
                 source_node_ids = set(
                     [
                         i.node.relationships[NodeRelationship.SOURCE].node_id
