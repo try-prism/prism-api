@@ -76,10 +76,6 @@ class DataPipelineServiceLocal:
                 "file_id": file_row["data"].id,
                 "process_date": self.process_date,
             }
-
-            ################################################################
-            logger.info("loaded_doc={}", loaded_doc)
-            ################################################################
             documents.extend(loaded_doc)
         except PrismException as e:
             logger.error("file_row={}, error={}", file_row, e)

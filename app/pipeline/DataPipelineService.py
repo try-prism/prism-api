@@ -144,7 +144,7 @@ class DataPipelineService:
         # This will split the documents into chunks.
 
         document = documents["doc"]
-        nodes = self.parser.get_nodes_from_documents([document])
+        nodes = self.parser.get_nodes_from_documents([document], show_progress=True)
 
         return [{"node": node} for node in nodes]
 
