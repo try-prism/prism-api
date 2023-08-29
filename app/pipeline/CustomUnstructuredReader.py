@@ -33,13 +33,20 @@ class CustomUnstructuredReader(BaseReader):
         self,
         file: IO[bytes],
         extra_info: dict | None = None,
+        split_documents: bool | None = False,
     ) -> list[Document]:
         """Parse file."""
         from unstructured.partition.auto import partition
 
         elements = partition(file=file)
         text_chunks = [" ".join(str(el).split()) for el in elements]
-        clean_text = self.clean_regex.sub(" ", "\n".join(text_chunks))
-        clean_text = self.compress_regex.sub(" ", clean_text)
 
-        return [Document(text=clean_text, extra_info=extra_info or {})]
+        if split_documents:
+            return [
+                Document(text=chunk, extra_info=extra_info or {})
+                for chunk in text_chunks
+            ]
+        else:
+            clean_text = self.clean_regex.sub(" ", "\n".join(text_chunks))
+            clean_text = self.compress_regex.sub(" ", clean_text)
+            return [Document(text=clean_text, extra_info=extra_info or {})]

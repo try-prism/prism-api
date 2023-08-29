@@ -857,13 +857,13 @@ test = ["pytest (>=6)"]
 
 [[package]]
 name = "fastapi"
-version = "0.101.1"
+version = "0.103.0"
 description = "FastAPI framework, high performance, easy to learn, fast to code, ready for production"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "fastapi-0.101.1-py3-none-any.whl", hash = "sha256:aef5f8676eb1b8389952e1fe734abe20f04b71f6936afcc53b320ba79b686a4b"},
-    {file = "fastapi-0.101.1.tar.gz", hash = "sha256:7b32000d14ca9992f7461117b81e4ef9ff0c07936af641b4fe40e67d5f9d63cb"},
+    {file = "fastapi-0.103.0-py3-none-any.whl", hash = "sha256:61ab72c6c281205dd0cbaccf503e829a37e0be108d965ac223779a8479243665"},
+    {file = "fastapi-0.103.0.tar.gz", hash = "sha256:4166732f5ddf61c33e9fa4664f73780872511e0598d4d5434b1816dc1e6d9421"},
 ]
 
 [package.dependencies]
@@ -1806,20 +1806,20 @@ files = [
 
 [[package]]
 name = "llama-index"
-version = "0.8.5.post2"
+version = "0.8.12"
 description = "Interface between LLMs and your data"
 optional = false
 python-versions = "*"
 files = [
-    {file = "llama_index-0.8.5.post2-py3-none-any.whl", hash = "sha256:934bc01095cd959d7b363acf5f108c4841ba20e450a95b4c80211bcb1df36b4e"},
-    {file = "llama_index-0.8.5.post2.tar.gz", hash = "sha256:bb9f27e9a151b0d5e7f2bc49856a226bcfe3d92378e4792aa4178ddcf7c013ab"},
+    {file = "llama_index-0.8.12-py3-none-any.whl", hash = "sha256:4f379d17a2acd468edfd102456cf2ccb72bec71089e180801356f79bcf3793fc"},
+    {file = "llama_index-0.8.12.tar.gz", hash = "sha256:5e0904469cec39180e442c8fd10bc17126d8936ca139eeed98afb64d02eeab56"},
 ]
 
 [package.dependencies]
 beautifulsoup4 = "*"
 dataclasses-json = "*"
 fsspec = ">=2023.5.0"
-langchain = ">=0.0.262,<=0.0.266"
+langchain = ">=0.0.262"
 nest-asyncio = "*"
 numpy = "*"
 openai = ">=0.26.4"
@@ -5078,4 +5078,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "62f2b86da4b760c06afdfeb1d4e117523583cf5da16057ec15d6de13addbb72c"
+content-hash = "8ea83c1caaf54e10e1d629bc8c78e6670740dbce3b39a24b388f063e6e948aa5"
