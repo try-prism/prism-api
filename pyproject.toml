@@ -8,9 +8,9 @@ packages = []
 
 [tool.poetry.dependencies]
 boto3 = "^1.28.31"
-fastapi = "^0.101.1"
+fastapi = "^0.103.0"
 langchain = "^0.0.262"
-llama-index = "^0.8.11.post3"
+llama-index = "^0.8.12"
 mergepythonclient = "^0.2.4"
 pymilvus = "^2.2.15"
 python = "^3.10"
