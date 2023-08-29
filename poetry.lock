@@ -1806,20 +1806,20 @@ files = [
 
 [[package]]
 name = "llama-index"
-version = "0.8.5.post2"
+version = "0.8.11.post3"
 description = "Interface between LLMs and your data"
 optional = false
 python-versions = "*"
 files = [
-    {file = "llama_index-0.8.5.post2-py3-none-any.whl", hash = "sha256:934bc01095cd959d7b363acf5f108c4841ba20e450a95b4c80211bcb1df36b4e"},
-    {file = "llama_index-0.8.5.post2.tar.gz", hash = "sha256:bb9f27e9a151b0d5e7f2bc49856a226bcfe3d92378e4792aa4178ddcf7c013ab"},
+    {file = "llama_index-0.8.11.post3-py3-none-any.whl", hash = "sha256:fa5fbba99029fb82dc08d66c3ff5fc4be2180f282f931af480e21c062f1c3338"},
+    {file = "llama_index-0.8.11.post3.tar.gz", hash = "sha256:bd0428b97e437fee2e1e4321f73aedbc66e7d714dfc2bf75b102a63d202f4de3"},
 ]
 
 [package.dependencies]
 beautifulsoup4 = "*"
 dataclasses-json = "*"
 fsspec = ">=2023.5.0"
-langchain = ">=0.0.262,<=0.0.266"
+langchain = ">=0.0.262"
 nest-asyncio = "*"
 numpy = "*"
 openai = ">=0.26.4"
@@ -5078,4 +5078,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "62f2b86da4b760c06afdfeb1d4e117523583cf5da16057ec15d6de13addbb72c"
+content-hash = "9114c8540540c6da18554bde8856b48fb508c5a11d157aad023533e1fc9eb806"
